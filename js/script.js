@@ -188,7 +188,7 @@ function movePlayer(){
 
 var board = new Board(2000, 2000);
 
-var foodCells = generateFoodCells(200, board);
+var foodCells = generateFoodCells(800, board);
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
     for (var i=0; i<numberOfCells; i++){
@@ -208,12 +208,13 @@ var player = new Player("player", 100, 100, 20);
 // RUN FUNCTIONS
 // resizeCanvas();
 player.updatePlayerPosition(canvas.width, canvas.height);
-drawingLoop();
+animationLoop();
 
 
 // DRAWING LOOP
 
-function drawingLoop(){
+function animationLoop(){
+    // --- Drawing elements ---
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // drawBoard();
@@ -234,9 +235,49 @@ function drawingLoop(){
     });
 
 
+    // --- Game logic ---
+    // foodCells.forEach(function (foodCell, index){
+    //     if (detectOverlapping(foodCell, player, 0.5)) {
+    //         player.area += foodCell.area;
+    //         player.r = getRadius(player.area);
+    //         foodCells.splice(index, 1);
+    //     }
+    // });
+
+    foodCells = eatSomething(foodCells, player);
+    enemyPlayers = eatSomething(enemyPlayers, player);
+    // player = eatSomething(player, enemyPlayers);
+
+    function eatSomething(preyArray, predator) {
+        if (preyArray.length===undefined){
+            preyArray = [preyArray];
+        }
+        preyArray.forEach(function (foodCell, index){
+            if (detectOverlapping(foodCell, predator, 0.5)) {
+                predator.area += foodCell.area;
+                predator.r = getRadius(predator.area);
+                preyArray.splice(index, 1);
+            }
+        });
+        return preyArray;
+    }
+
+    // function eatSomething(preyArray, predator) {
+    //     preyArray.filter(function (onePrey){
+    //         if (detectOverlapping(onePrey, predator, 1)) {
+    //             predator.area += onePrey.area;
+    //             predator.r = getRadius(predator.area);
+    
+    //             return false;
+    //         }
+    //         return true;
+    //     });
+    //     return preyArray;
+    // }
+
     requestAnimationFrame(function (){
         // set up a recursive loop (the drawingLoop function calls itself)
-        drawingLoop();
+        animationLoop();
     });
 }
 
@@ -250,10 +291,23 @@ function positionToRelative(absX, absY){
     };
 }
 
-function detectOverlapping(cellOne, cellTwo, overlapRatio){
-    var distance = Math.sqrt((cellOne.x - cellTwo.x)**2-(cellOne.y - cellTwo.y)**2);
-    return distance < Math.max(cellOne.r, cellTwo.r) - overlapRatio * 2 * Math.min(cellOne.r, cellTwo.r);
+function getRadius(area){
+    return Math.sqrt(area/Math.PI);
 }
+
+function getArea(radius){
+    return Math.PI*radius**2;
+}
+
+function detectOverlapping(cellOne, cellTwo, overlapRatio){
+    // overlapRatio ([-1; 1]) states the multiplier for the smallest item's radius.
+    // This is defined in order to define overlapping rules
+    // 1: whole prey cell must be overlapped to be eaten
+    // 0: half prey must be overlapped
+    // -1: tangency is enough
+    var distance = Math.sqrt((cellOne.x - cellTwo.x)**2 + (cellOne.y - cellTwo.y)**2);
+    return (distance <= Math.max(cellOne.r, cellTwo.r) - overlapRatio * Math.min(cellOne.r, cellTwo.r));
+};
 
 
 // RESIZE WINDOW EVENT LISTENER
