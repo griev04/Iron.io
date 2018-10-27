@@ -181,7 +181,7 @@ function movePlayer(){
 
 // CREATE INSTANCES OF CLASSES
 
-var player = new Player("player", 100, 100, 10);
+var player = new Player("player", 100, 100, 20);
 var board = new Board(2000, 2000);
 
 var foodCells = generateFoodCells(50, board);
@@ -195,7 +195,7 @@ function generateFoodCells(numberOfCells, board){
 
 var enemyPlayers = [
     new Enemy("enemy1", 300, 200, 10),
-    new Enemy("enemy2", 600, 400, 20),
+    new Enemy("enemy2", 600, 400, 30),
     new Enemy("enemy3", 900, 700, 100),
 ];
 
@@ -218,12 +218,15 @@ function drawingLoop(){
         cell.drawMe();
     });
 
-    enemyPlayers.forEach(function(enemy){
+    enemyPlayers.filter(enemy => enemy.r <= player.r).forEach(function(enemy){
         enemy.drawMe();
     });
-    // drawTestEnemy();
 
     player.drawMe();
+
+    enemyPlayers.filter(enemy => enemy.r > player.r).forEach(function(enemy){
+        enemy.drawMe();
+    });
 
 
     requestAnimationFrame(function (){
