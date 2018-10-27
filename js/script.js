@@ -6,7 +6,8 @@ class Player {
         this.x = playerX;
         this.y = playerY;
         this.r = playerRadius;
-        this.score = 100;
+        this.area = Math.PI*this.r**2;
+        this.score = 0;
         this.screenX;
         this.screenY;
         this.speed = 20;
@@ -73,11 +74,12 @@ class Board {
     // }
 }
 
-class Food {
+class FoodCell {
     constructor(gridSizeX, gridSizeY){
         this.x = Math.floor(Math.random()*gridSizeX);
         this.y = Math.floor(Math.random()*gridSizeY);
         this.r = 5;
+        this.area = Math.PI*this.r**2;
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
@@ -109,9 +111,9 @@ class Enemy {
         this.x = playerX;
         this.y = playerY;
         this.r = playerRadius;
-        this.score = 100;
+        this.area = Math.PI*this.r**2;
+        this.score = 0;
         this.speed = 20;
-        this.moveTreshold = 20;
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
@@ -137,6 +139,9 @@ class Enemy {
     }
 }
 
+class Trap {
+
+}
 
 // CANVAS SETUP
 
@@ -181,14 +186,13 @@ function movePlayer(){
 
 // CREATE INSTANCES OF CLASSES
 
-var player = new Player("player", 100, 100, 20);
 var board = new Board(2000, 2000);
 
-var foodCells = generateFoodCells(50, board);
+var foodCells = generateFoodCells(200, board);
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
     for (var i=0; i<numberOfCells; i++){
-        arrayOfCells.push(new Food(board.sizeX, board.sizeY));
+        arrayOfCells.push(new FoodCell(board.sizeX, board.sizeY));
     }
     return arrayOfCells;
 }
@@ -199,6 +203,7 @@ var enemyPlayers = [
     new Enemy("enemy3", 900, 700, 100),
 ];
 
+var player = new Player("player", 100, 100, 20);
 
 // RUN FUNCTIONS
 // resizeCanvas();
@@ -236,6 +241,21 @@ function drawingLoop(){
 }
 
 
+// OTHER FUNCTIONALITIES
+
+function positionToRelative(absX, absY){
+    return {
+        x: absX - player.x + (canvas.width)/2,
+        y: absY - player.y + (canvas.height)/2
+    };
+}
+
+function detectOverlapping(cellOne, cellTwo, overlapRatio){
+    var distance = Math.sqrt((cellOne.x - cellTwo.x)**2-(cellOne.y - cellTwo.y)**2);
+    return distance < Math.max(cellOne.r, cellTwo.r) - overlapRatio * 2 * Math.min(cellOne.r, cellTwo.r);
+}
+
+
 // RESIZE WINDOW EVENT LISTENER
 
 // window.addEventListener('resize', resizeCanvas, false);
@@ -248,34 +268,3 @@ function drawingLoop(){
 
 
 // TESTING
-
-// function drawTestEnemy(){
-//     // DRAWING A CIRCLE
-//     // start a path (custom drawing needed for circles)
-//     ctx.beginPath();
-//     // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
-//     var absX = 200;
-//     var absY = 100;
-//     var relPosition = positionToRelative(absX, absY);
-//     console.log(relPosition);
-//     ctx.arc(relPosition.x, relPosition.y, 10, 0, 2*Math.PI);
-//     // stroke the circle
-//     ctx.lineWidth = 6;
-//     ctx.strokeStyle = "tomato";
-//     ctx.stroke();
-//     // fill the circle
-//     ctx.fillStyle = "black";
-//     ctx.fill();
-//     // end the path
-//     ctx.closePath();
-// }
-
-function positionToRelative(absX, absY){
-    // console.log(absX);
-    // console.log(player.x);
-    // console.log((canvas.width)/2);
-    return {
-        x: absX - player.x + (canvas.width)/2,
-        y: absY - player.y + (canvas.height)/2
-    };
-}
