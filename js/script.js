@@ -12,7 +12,7 @@ class Player {
         this.screenY;
         this.speed = 20;
         this.moveTreshold = 20;
-        this.isAlive = true;
+        this.gameIsOn = true;
     }
     drawMe(){
         // DRAWING A CIRCLE
@@ -115,8 +115,11 @@ class Enemy {
         this.y = playerY;
         this.r = playerRadius;
         this.area = getArea(this.r);
+        this.deltaX = 0;
+        this.deltaY = 0;
         this.score = 0;
         this.speed = 20;
+        this.moveTreshold = 20;
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
@@ -159,7 +162,12 @@ var mouseY = 0;
 
 function setMouseMoveListener(){
     window.onmousemove = mouseMove;
-    setInterval("movePlayer()",100);
+    setInterval(function(){
+        movePlayer(player);
+        enemyPlayers.forEach(function(enemy){
+            moveOneEnemy(enemy);
+        });
+    },100);
 }
 
 function mouseMove(event) {
@@ -167,8 +175,8 @@ function mouseMove(event) {
     mouseY = event.clientY;
 }
 
-function movePlayer(){
-    if (!player.isAlive){
+function movePlayer(player){
+    if (!player.gameIsOn){
         return
     }
     if (Math.abs(player.screenX - mouseX)>player.moveTreshold){
@@ -181,7 +189,7 @@ function movePlayer(){
         if (player.screenY > mouseY) {
             player.y = Math.max(player.y -= player.speed, 0);
         } else {
-            player.y = Math.min(player.y += player.speed, board.sizeX);
+            player.y = Math.min(player.y += player.speed, board.sizeY);
         }
     }
     // console.log("Player's position: " + player.x + ", " + player.y);
@@ -190,7 +198,7 @@ function movePlayer(){
 
 // CREATE INSTANCES OF CLASSES
 
-var board = new Board(2000, 2000);
+var board = new Board(4320, 2160);
 
 var foodCells = generateFoodCells(800, board);
 function generateFoodCells(numberOfCells, board){
@@ -205,9 +213,15 @@ var enemyPlayers = [
     new Enemy("enemy1", 300, 200, 10),
     new Enemy("enemy2", 300, 400, 30),
     new Enemy("enemy3", 300, 700, 100),
+    new Enemy("enemy4", 1600, 700, 50),
+    new Enemy("enemy5", 300, 1700, 70),
+    new Enemy("enemy6", 300, 900, 200),
+    new Enemy("enemy7", 1300, 700, 100),
 ];
 
-var player = new Player("player", 100, 100, 20);
+randomDirection(enemyPlayers);
+
+var player = new Player("player", 1100, 400, 40);
 
 // RUN FUNCTIONS
 
@@ -222,8 +236,6 @@ animationLoop();
 
 function animationLoop(){
 
-    enemyPlayers[enemyPlayers.length-1].y -= 1;
-    console.log(enemyPlayers[enemyPlayers.length-1].area)
     // --- Drawing elements ---
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -234,7 +246,7 @@ function animationLoop(){
         cell.drawMe();
     });
 
-    if (player.isAlive){
+    if (player.gameIsOn){
         enemyPlayers.filter(enemy => enemy.r <= player.r).forEach(function(enemy){
             enemy.drawMe();
         });
@@ -259,50 +271,10 @@ function animationLoop(){
     enemyPlayers.forEach(function(enemy){
         enemyPlayers = eatSomething(enemyPlayers, enemy);
     });
+    
+    if (enemyPlayers.length===0){
+        player.gameIsOn = false;
 
-
-    // --- Game logic ---
-    // foodCells.forEach(function (foodCell, index){
-    //     if (detectOverlapping(foodCell, player, 0.5)) {
-    //         player.area += foodCell.area;
-    //         player.r = getRadius(player.area);
-    //         foodCells.splice(index, 1);
-    //     }
-    // });
-
-
-    function eatSomething(preyArray, predator) {
-        if (preyArray.length===undefined){
-            preyArray = [preyArray];
-        }
-        preyArray.forEach(function (prey, index){
-            if (prey.r >= predator.r){
-                return
-            }
-            if (prey.name === predator.name){
-                return;
-            }
-            if (detectOverlapping(prey, predator, 0.5)) {
-                predator.area += prey.area;
-                predator.r = getRadius(predator.area);
-                preyArray.splice(index, 1);
-            }
-        });
-        return preyArray;
-    }
-
-    function eatPlayer(prey, predatorArray){
-        predatorArray.forEach(function (predator){
-            if (prey.r >= predator.r){
-                return
-            }
-            if (detectOverlapping(prey, predator, 0)) {
-                predator.area += prey.area;
-                predator.r = getRadius(predator.area);
-                prey.isAlive = false;
-                prey.r = 0;
-            }
-        });
     }
 
     // function eatSomething(preyArray, predator) {
@@ -322,6 +294,73 @@ function animationLoop(){
         // set up a recursive loop (the drawingLoop function calls itself)
         animationLoop();
     });
+}
+
+
+// --- GAME LOGIC ---
+
+function eatSomething(preyArray, predator) {
+    if (preyArray.length===undefined){
+        preyArray = [preyArray];
+    }
+    preyArray.forEach(function (prey, index){
+        if (prey.r >= predator.r){
+            return
+        }
+        if (prey.name === predator.name){
+            return;
+        }
+        if (detectOverlapping(prey, predator, 0.5)) {
+            predator.area += prey.area;
+            predator.r = getRadius(predator.area);
+            preyArray.splice(index, 1);
+        }
+    });
+    return preyArray;
+}
+
+function eatPlayer(prey, predatorArray){
+    predatorArray.forEach(function (predator){
+        if (prey.r >= predator.r){
+            return
+        }
+        if (detectOverlapping(prey, predator, 0)) {
+            predator.area += prey.area;
+            predator.r = getRadius(predator.area);
+            prey.gameIsOn = false;
+            prey.r = 0;
+        }
+    });
+}
+
+// PLAYER AI
+setInterval("randomDirection(enemyPlayers)",4000);
+
+function randomDirection(enemyArray){
+    enemyArray.forEach(function(onePlayer){
+        moveRandom(onePlayer);
+    });
+}
+
+function moveRandom(onePlayer){
+    onePlayer.deltaX = Math.floor(Math.random()*201) - 100;
+    onePlayer.deltaY = Math.floor(Math.random()*201) - 100;
+}
+
+function moveOneEnemy(oneEnemy){
+    if (Math.abs(oneEnemy.deltaX)>oneEnemy.moveTreshold){
+        if (oneEnemy.deltaX < 0) {
+            oneEnemy.x = Math.max(oneEnemy.x -= oneEnemy.speed, 0);
+        } else {
+            oneEnemy.x = Math.min(oneEnemy.x += oneEnemy.speed, board.sizeX);
+        }    }
+    if (Math.abs(oneEnemy.deltaY)>oneEnemy.moveTreshold){
+        if (oneEnemy.deltaY < 0) {
+            oneEnemy.y = Math.max(oneEnemy.y -= oneEnemy.speed, 0);
+        } else {
+            oneEnemy.y = Math.min(oneEnemy.y += oneEnemy.speed, board.sizeY);
+        }
+    }
 }
 
 
