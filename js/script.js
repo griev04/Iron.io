@@ -17,7 +17,7 @@ playerDB = [
     powerUpRadius: 1},
     {name: "Antoine",
     powerUpRadius: 1},
-    {name: "Pryihanka",
+    {name: "Priyanka",
     powerUpRadius: 8},
     {name: "Harnit",
     powerUpRadius: 10},
@@ -31,7 +31,7 @@ playerDB = [
     powerUpRadius: 1},
     {name: "Mehdi",
     powerUpRadius: 1},
-    {name: "Geoffrey",
+    {name: "Geoffroy",
     powerUpRadius: 1},
     {name: "Heather",
     powerUpRadius: 1},
@@ -68,7 +68,7 @@ class Player {
         // start a path (custom drawing needed for circles)
         ctx.beginPath();
         // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
-        ctx.arc(this.screenX, this.screenY, this.r, 0, 2*Math.PI);
+        ctx.arc(this.screenX, this.screenY, this.r*board.scale, 0, 2*Math.PI);
         // stroke the circle
         ctx.lineWidth = 6;
         ctx.strokeStyle = "black";
@@ -100,10 +100,10 @@ class Board {
         ctx.strokeStyle = "black";
         ctx.lineWidth = 10;
         // draw a rectangle outline (x, y, width, height)
-        ctx.strokeRect(relPosition.x, relPosition.y, this.sizeX, this.sizeY);
+        ctx.strokeRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
 
         ctx.fillStyle = "white";
-        ctx.fillRect(relPosition.x, relPosition.y, this.sizeX, this.sizeY);
+        ctx.fillRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
     }
 
     // drawMeGrid(){
@@ -133,7 +133,7 @@ class FoodCell {
         this.r = 5;
         this.area = getArea(this.r);
         this.color = "rgb(" +
-        [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
+        [256, 256, 256].map(channel => Math.floor(Math.random()*channel)).join(", ") +
         ")";
     }
 
@@ -146,7 +146,7 @@ class FoodCell {
             // start a path (custom drawing needed for circles)
             ctx.beginPath();
             // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
-            ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
+            ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
             // stroke the circle
             ctx.lineWidth = 2;
             ctx.strokeStyle = "rgba(0, 0, 0, 0)";
@@ -187,7 +187,7 @@ class Enemy {
             ctx.beginPath();
             // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
             // console.log(relPosition);
-            ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
+            ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
             // stroke the circle
             ctx.lineWidth = 6;
             ctx.strokeStyle = "black";
@@ -254,16 +254,16 @@ function movePlayer(player){
 
 // CREATE INSTANCES OF CLASSES
 
-let boardSize = {
+const BOARD_SIZE = {
     width: 4320,
     height: 2160,
 };
 
-let foodCount = 800;
+const FOOD_COUNT = 800;
 
-var board = new Board(boardSize.width, boardSize.height);
+var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height);
 
-var foodCells = generateFoodCells(foodCount, board);
+var foodCells = generateFoodCells(FOOD_COUNT, board);
 
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
@@ -315,9 +315,9 @@ function animationLoop(){
     });
 
     // sort enemies from smallest to largest
-    enemyPlayers.sort((a,b) => a.r - b.r);
+    enemyPlayers.sort((playerOne, playerTwo) => playerOne.r - playerTwo.r);
     // update offscreen tolerance value for rendering
-    offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r);
+    offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r*board.scale);
     // Player in game
     if (player.playerInGame){
         // draw player and enemies
@@ -358,9 +358,8 @@ function animationLoop(){
     }
 
     // Replenish food stock
-    if (foodCells.length<=0.7*foodCount){
-        foodCells = foodCells.concat(generateFoodCells(foodCount-foodCells.length, board));
-        console.log(foodCells.length);
+    if (foodCells.length<=0.7*FOOD_COUNT){
+        foodCells = foodCells.concat(generateFoodCells(FOOD_COUNT-foodCells.length, board));
     }
 
     requestAnimationFrame(function (){
@@ -411,7 +410,7 @@ function eatSomething(preyArray, predator) {
             predator.r = getRadius(predator.area);
             preyArray.splice(index, 1);
             if (prey.name !== 'food'){
-                deadEnemies.push(playerDB.find(el => el.name===prey.name));                
+                deadEnemies.push(playerDB.find(player => player.name===prey.name));                
             }
         }
     });
@@ -467,7 +466,6 @@ function respawnEnemies(){
     enemiesToSpwan = deadEnemies;
     deadEnemies = [];
     enemiesToSpwan.forEach(enemy => spawnEnemy(enemy));
-    console.log(enemyPlayers);
 }
 
 
@@ -475,8 +473,10 @@ function respawnEnemies(){
 
 function positionToRelative(absX, absY){
     return {
-        x: absX - player.x + (canvas.width)/2,
-        y: absY - player.y + (canvas.height)/2
+        // x: absX - player.x + (canvas.width)/2,
+        // y: absY - player.y + (canvas.height)/2
+        x: board.scale * absX - board.scale * player.x + (canvas.width)/2,
+        y: board.scale * absY - board.scale * player.y + (canvas.height)/2
     };
 }
 
@@ -503,8 +503,8 @@ function detectOverlapping(cellOne, cellTwo, overlapRatio){
 
 window.addEventListener('resize', resizeCanvas, false);
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth-8;
+    canvas.height = window.innerHeight-8;
 
     player.updatePlayerPosition(canvas.width, canvas.height);
 }
@@ -514,11 +514,24 @@ function resizeCanvas() {
 // keydown event handler (when user presses down on any key)
 
 document.onkeydown = function(event){
+    switch (event.keyCode) {
+        case 49: // 1 key      
+            board.scale = Math.max(board.scale -= 0.1, 0.1);
+            break;
+        case 50: // 2 key
+            board.scale = Math.min(board.scale += 0.1, 4);
+            break;
+        case 51: // 3 key
+            board.scale = 1;
+            break;
+    }
+
+    // only out of game commands
     if(player.playerInGame){
         return
     }
     switch (event.keyCode) {
-        case 13: // left arrow
+        case 13: // return key
             spawnPlayer();
             break;
     }
