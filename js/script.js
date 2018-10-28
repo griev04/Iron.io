@@ -1,3 +1,52 @@
+playerDB = [
+    {name: "Cecile",
+    powerUpRadius: 1},
+    {name: "Regis",
+    powerUpRadius: 4},
+    {name: "Helen",
+    powerUpRadius: 5},
+    {name: "Filippo",
+    powerUpRadius: 3},
+    {name: "Fareaha",
+    powerUpRadius: 7},
+    {name: "Niccolo",
+    powerUpRadius: 4},
+    {name: "Amine",
+    powerUpRadius: 2},
+    {name: "Adele",
+    powerUpRadius: 1},
+    {name: "Antoine",
+    powerUpRadius: 1},
+    {name: "Pryihanka",
+    powerUpRadius: 8},
+    {name: "Harnit",
+    powerUpRadius: 10},
+    {name: "Jean-Nicolas",
+    powerUpRadius: 6},
+    {name: "Mathis",
+    powerUpRadius: 2},
+    {name: "Laura",
+    powerUpRadius: 1},
+    {name: "Chloe",
+    powerUpRadius: 1},
+    {name: "Mehdi",
+    powerUpRadius: 1},
+    {name: "Geoffrey",
+    powerUpRadius: 1},
+    {name: "Heather",
+    powerUpRadius: 1},
+    {name: "Nicolas",
+    powerUpRadius: 3},
+    {name: "Abi",
+    powerUpRadius: 1},
+    {name: "Marie",
+    powerUpRadius: 1},
+    {name: "Paul",
+    powerUpRadius: 1},
+    {name: "Nizar",
+    powerUpRadius: 1},
+]
+
 // CLASSES
 
 class Player {
@@ -12,7 +61,7 @@ class Player {
         this.screenY;
         this.speed = 20;
         this.moveTreshold = 20;
-        this.gameIsOn = true;
+        this.playerInGame = false;
     }
     drawMe(){
         // DRAWING A CIRCLE
@@ -90,21 +139,24 @@ class FoodCell {
 
     drawMe(){
         // DRAWING A CIRCLE
-        // start a path (custom drawing needed for circles)
-        ctx.beginPath();
-        // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
         var relPosition = positionToRelative(this.x, this.y);
-        // console.log(relPosition);
-        ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
-        // stroke the circle
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "rgba(0, 0, 0, 0)";
-        ctx.stroke();
-        // fill the circle
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        // end the path
-        ctx.closePath();
+        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        if (onScreen){
+            // start a path (custom drawing needed for circles)
+            ctx.beginPath();
+            // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
+            ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
+            // stroke the circle
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(0, 0, 0, 0)";
+            ctx.stroke();
+            // fill the circle
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            // end the path
+            ctx.closePath();
+        }        
     }
 }
 
@@ -126,22 +178,26 @@ class Enemy {
     }
 
     drawMe(){
-        // DRAWING A CIRCLE
-        // start a path (custom drawing needed for circles)
-        ctx.beginPath();
-        // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
         var relPosition = positionToRelative(this.x, this.y);
-        // console.log(relPosition);
-        ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
-        // stroke the circle
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = "black";
-        ctx.stroke();
-        // fill the circle
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        // end the path
-        ctx.closePath();
+        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        if (onScreen){
+            // DRAWING A CIRCLE
+            // start a path (custom drawing needed for circles)
+            ctx.beginPath();
+            // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
+            // console.log(relPosition);
+            ctx.arc(relPosition.x, relPosition.y, this.r, 0, 2*Math.PI);
+            // stroke the circle
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+            // fill the circle
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            // end the path
+            ctx.closePath();
+        }
     }
 }
 
@@ -153,7 +209,7 @@ class Trap {
 
 var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
-
+var offScreenTolerance = 200;
 
 // PLAYER'S MOVEMENT
 setMouseMoveListener();
@@ -176,7 +232,7 @@ function mouseMove(event) {
 }
 
 function movePlayer(player){
-    if (!player.gameIsOn){
+    if (!player.playerInGame){
         return
     }
     if (Math.abs(player.screenX - mouseX)>player.moveTreshold){
@@ -198,9 +254,17 @@ function movePlayer(player){
 
 // CREATE INSTANCES OF CLASSES
 
-var board = new Board(4320, 2160);
+let boardSize = {
+    width: 4320,
+    height: 2160,
+};
 
-var foodCells = generateFoodCells(800, board);
+let foodCount = 800;
+
+var board = new Board(boardSize.width, boardSize.height);
+
+var foodCells = generateFoodCells(foodCount, board);
+
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
     for (var i=0; i<numberOfCells; i++){
@@ -209,27 +273,31 @@ function generateFoodCells(numberOfCells, board){
     return arrayOfCells;
 }
 
-var enemyPlayers = [
-    new Enemy("enemy1", 300, 200, 10),
-    new Enemy("enemy2", 300, 400, 30),
-    new Enemy("enemy3", 300, 700, 100),
-    new Enemy("enemy4", 1600, 700, 50),
-    new Enemy("enemy5", 300, 1700, 70),
-    new Enemy("enemy6", 300, 900, 200),
-    new Enemy("enemy7", 1300, 700, 100),
-];
-
+// var enemyPlayers = [
+//     new Enemy("enemy1", 300, 200, 10),
+//     new Enemy("enemy2", 300, 400, 30),
+//     new Enemy("enemy3", 300, 700, 100),
+//     new Enemy("enemy4", 1600, 700, 50),
+//     new Enemy("enemy5", 300, 1700, 70),
+//     new Enemy("enemy6", 300, 900, 200),
+//     new Enemy("enemy7", 1300, 700, 100),
+// ];
+var enemyPlayers = [];
+var deadEnemies = [];
+playerDB.forEach(function(enemyPlayer){
+    spawnEnemy(enemyPlayer);
+});
 randomDirection(enemyPlayers);
-
-var player = new Player("player", 1100, 400, 40);
 
 // RUN FUNCTIONS
 
 // canvas.width = window.innerWidth;
 // canvas.height = window.innerHeight;
+
+player = createPlayer("playerName");
 resizeCanvas();
-player.updatePlayerPosition(canvas.width, canvas.height);
 animationLoop();
+
 
 
 // DRAWING LOOP
@@ -246,7 +314,13 @@ function animationLoop(){
         cell.drawMe();
     });
 
-    if (player.gameIsOn){
+    // sort enemies from smallest to largest
+    enemyPlayers.sort((a,b) => a.r - b.r);
+    // update offscreen tolerance value for rendering
+    offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r);
+    // Player in game
+    if (player.playerInGame){
+        // draw player and enemies
         enemyPlayers.filter(enemy => enemy.r <= player.r).forEach(function(enemy){
             enemy.drawMe();
         });
@@ -257,38 +331,37 @@ function animationLoop(){
             enemy.drawMe();
         });
 
+        // player eats food
         foodCells = eatSomething(foodCells, player);
+        // player eats enemies
         enemyPlayers = eatSomething(enemyPlayers, player);
+        // player is eaten
         eatPlayer(player, enemyPlayers);
     } else {
+        // draw only enemies
         enemyPlayers.forEach(enemy => enemy.drawMe());
     }
 
+    // Enemy's behaviour
+    // enemy eats food
     enemyPlayers.forEach(function(enemy){
         foodCells = eatSomething(foodCells, enemy);
     });
-
+    // enemy eats enemy
     enemyPlayers.forEach(function(enemy){
         enemyPlayers = eatSomething(enemyPlayers, enemy);
     });
     
+    // no more enemies
     if (enemyPlayers.length===0){
-        player.gameIsOn = false;
-
+        player.playerInGame = false;
     }
 
-    // function eatSomething(preyArray, predator) {
-    //     preyArray.filter(function (onePrey){
-    //         if (detectOverlapping(onePrey, predator, 1)) {
-    //             predator.area += onePrey.area;
-    //             predator.r = getRadius(predator.area);
-    
-    //             return false;
-    //         }
-    //         return true;
-    //     });
-    //     return preyArray;
-    // }
+    // Replenish food stock
+    if (foodCells.length<=0.7*foodCount){
+        foodCells = foodCells.concat(generateFoodCells(foodCount-foodCells.length, board));
+        console.log(foodCells.length);
+    }
 
     requestAnimationFrame(function (){
         // set up a recursive loop (the drawingLoop function calls itself)
@@ -298,6 +371,29 @@ function animationLoop(){
 
 
 // --- GAME LOGIC ---
+
+function createPlayer(playerName){
+    var randX = Math.floor(Math.random()*board.sizeX);
+    var randY = Math.floor(Math.random()*board.sizeY);
+    player = new Player(playerName, randX, randY, 40);
+    player.playerInGame = false;
+    return player;
+}
+
+function spawnPlayer(){
+    if (player.r === 0){
+        createPlayer("playerName")
+    }
+    player.updatePlayerPosition(canvas.width, canvas.height);
+    player.playerInGame = true;
+}
+
+function spawnEnemy(enemyPlayer){
+    var randX = Math.floor(Math.random()*board.sizeX);
+    var randY = Math.floor(Math.random()*board.sizeY);
+    var radius = 10 * enemyPlayer.powerUpRadius;
+    enemyPlayers.push(new Enemy(enemyPlayer.name, randX, randY, radius));
+}
 
 function eatSomething(preyArray, predator) {
     if (preyArray.length===undefined){
@@ -310,10 +406,13 @@ function eatSomething(preyArray, predator) {
         if (prey.name === predator.name){
             return;
         }
-        if (detectOverlapping(prey, predator, 0.5)) {
+        if (detectOverlapping(prey, predator, 0)) {
             predator.area += prey.area;
             predator.r = getRadius(predator.area);
             preyArray.splice(index, 1);
+            if (prey.name !== 'food'){
+                deadEnemies.push(playerDB.find(el => el.name===prey.name));                
+            }
         }
     });
     return preyArray;
@@ -327,7 +426,7 @@ function eatPlayer(prey, predatorArray){
         if (detectOverlapping(prey, predator, 0)) {
             predator.area += prey.area;
             predator.r = getRadius(predator.area);
-            prey.gameIsOn = false;
+            prey.playerInGame = false;
             prey.r = 0;
         }
     });
@@ -335,6 +434,7 @@ function eatPlayer(prey, predatorArray){
 
 // PLAYER AI
 setInterval("randomDirection(enemyPlayers)",4000);
+setInterval("respawnEnemies()",5000);
 
 function randomDirection(enemyArray){
     enemyArray.forEach(function(onePlayer){
@@ -361,6 +461,13 @@ function moveOneEnemy(oneEnemy){
             oneEnemy.y = Math.min(oneEnemy.y += oneEnemy.speed, board.sizeY);
         }
     }
+}
+
+function respawnEnemies(){
+    enemiesToSpwan = deadEnemies;
+    deadEnemies = [];
+    enemiesToSpwan.forEach(enemy => spawnEnemy(enemy));
+    console.log(enemyPlayers);
 }
 
 
@@ -401,6 +508,21 @@ function resizeCanvas() {
 
     player.updatePlayerPosition(canvas.width, canvas.height);
 }
+
+
+// KEY PRESSES EVENT LISTENER
+// keydown event handler (when user presses down on any key)
+
+document.onkeydown = function(event){
+    if(player.playerInGame){
+        return
+    }
+    switch (event.keyCode) {
+        case 13: // left arrow
+            spawnPlayer();
+            break;
+    }
+};
 
 
 // TESTING
