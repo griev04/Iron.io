@@ -6,12 +6,13 @@ class Player {
         this.x = playerX;
         this.y = playerY;
         this.r = playerRadius;
-        this.area = Math.PI*this.r**2;
+        this.area = getArea(this.r);
         this.score = 0;
         this.screenX;
         this.screenY;
         this.speed = 20;
         this.moveTreshold = 20;
+        this.isAlive = true;
     }
     drawMe(){
         // DRAWING A CIRCLE
@@ -39,6 +40,7 @@ class Board {
     constructor(gridSizeX, gridSizeY){
         this.sizeX = gridSizeX;
         this.sizeY = gridSizeY;
+        this.scale = 1;
     }
 
     drawMe(){
@@ -76,10 +78,11 @@ class Board {
 
 class FoodCell {
     constructor(gridSizeX, gridSizeY){
+        this.name = "food";
         this.x = Math.floor(Math.random()*gridSizeX);
         this.y = Math.floor(Math.random()*gridSizeY);
         this.r = 5;
-        this.area = Math.PI*this.r**2;
+        this.area = getArea(this.r);
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
@@ -111,7 +114,7 @@ class Enemy {
         this.x = playerX;
         this.y = playerY;
         this.r = playerRadius;
-        this.area = Math.PI*this.r**2;
+        this.area = getArea(this.r);
         this.score = 0;
         this.speed = 20;
         this.color = "rgb(" +
@@ -147,14 +150,12 @@ class Trap {
 
 var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
 
 // PLAYER'S MOVEMENT
+setMouseMoveListener();
 var mouseX = 0;
 var mouseY = 0;
-setMouseMoveListener();
 
 function setMouseMoveListener(){
     window.onmousemove = mouseMove;
@@ -167,6 +168,9 @@ function mouseMove(event) {
 }
 
 function movePlayer(){
+    if (!player.isAlive){
+        return
+    }
     if (Math.abs(player.screenX - mouseX)>player.moveTreshold){
         if (player.screenX > mouseX) {
             player.x = Math.max(player.x -= player.speed, 0);
@@ -199,14 +203,17 @@ function generateFoodCells(numberOfCells, board){
 
 var enemyPlayers = [
     new Enemy("enemy1", 300, 200, 10),
-    new Enemy("enemy2", 600, 400, 30),
-    new Enemy("enemy3", 900, 700, 100),
+    new Enemy("enemy2", 300, 400, 30),
+    new Enemy("enemy3", 300, 700, 100),
 ];
 
 var player = new Player("player", 100, 100, 20);
 
 // RUN FUNCTIONS
-// resizeCanvas();
+
+// canvas.width = window.innerWidth;
+// canvas.height = window.innerHeight;
+resizeCanvas();
 player.updatePlayerPosition(canvas.width, canvas.height);
 animationLoop();
 
@@ -214,6 +221,9 @@ animationLoop();
 // DRAWING LOOP
 
 function animationLoop(){
+
+    enemyPlayers[enemyPlayers.length-1].y -= 1;
+    console.log(enemyPlayers[enemyPlayers.length-1].area)
     // --- Drawing elements ---
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -224,14 +234,30 @@ function animationLoop(){
         cell.drawMe();
     });
 
-    enemyPlayers.filter(enemy => enemy.r <= player.r).forEach(function(enemy){
-        enemy.drawMe();
+    if (player.isAlive){
+        enemyPlayers.filter(enemy => enemy.r <= player.r).forEach(function(enemy){
+            enemy.drawMe();
+        });
+
+        player.drawMe();
+
+        enemyPlayers.filter(enemy => enemy.r > player.r).forEach(function(enemy){
+            enemy.drawMe();
+        });
+
+        foodCells = eatSomething(foodCells, player);
+        enemyPlayers = eatSomething(enemyPlayers, player);
+        eatPlayer(player, enemyPlayers);
+    } else {
+        enemyPlayers.forEach(enemy => enemy.drawMe());
+    }
+
+    enemyPlayers.forEach(function(enemy){
+        foodCells = eatSomething(foodCells, enemy);
     });
 
-    player.drawMe();
-
-    enemyPlayers.filter(enemy => enemy.r > player.r).forEach(function(enemy){
-        enemy.drawMe();
+    enemyPlayers.forEach(function(enemy){
+        enemyPlayers = eatSomething(enemyPlayers, enemy);
     });
 
 
@@ -244,22 +270,39 @@ function animationLoop(){
     //     }
     // });
 
-    foodCells = eatSomething(foodCells, player);
-    enemyPlayers = eatSomething(enemyPlayers, player);
-    // player = eatSomething(player, enemyPlayers);
 
     function eatSomething(preyArray, predator) {
         if (preyArray.length===undefined){
             preyArray = [preyArray];
         }
-        preyArray.forEach(function (foodCell, index){
-            if (detectOverlapping(foodCell, predator, 0.5)) {
-                predator.area += foodCell.area;
+        preyArray.forEach(function (prey, index){
+            if (prey.r >= predator.r){
+                return
+            }
+            if (prey.name === predator.name){
+                return;
+            }
+            if (detectOverlapping(prey, predator, 0.5)) {
+                predator.area += prey.area;
                 predator.r = getRadius(predator.area);
                 preyArray.splice(index, 1);
             }
         });
         return preyArray;
+    }
+
+    function eatPlayer(prey, predatorArray){
+        predatorArray.forEach(function (predator){
+            if (prey.r >= predator.r){
+                return
+            }
+            if (detectOverlapping(prey, predator, 0)) {
+                predator.area += prey.area;
+                predator.r = getRadius(predator.area);
+                prey.isAlive = false;
+                prey.r = 0;
+            }
+        });
     }
 
     // function eatSomething(preyArray, predator) {
@@ -312,13 +355,13 @@ function detectOverlapping(cellOne, cellTwo, overlapRatio){
 
 // RESIZE WINDOW EVENT LISTENER
 
-// window.addEventListener('resize', resizeCanvas, false);
-// function resizeCanvas() {
-//     canvas.width = window.innerWidth;
-//     canvas.height = window.innerHeight;
+window.addEventListener('resize', resizeCanvas, false);
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-//     player.updatePlayerPosition(canvas.width, canvas.height);
-// }
+    player.updatePlayerPosition(canvas.width, canvas.height);
+}
 
 
 // TESTING
