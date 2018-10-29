@@ -45,7 +45,8 @@ playerDB = [
     powerUpRadius: 1},
     {name: "Nizar",
     powerUpRadius: 1},
-]
+];
+
 
 // CLASSES
 
@@ -56,12 +57,13 @@ class Player {
         this.y = playerY;
         this.r = playerRadius;
         this.area = getArea(this.r);
-        this.score = Math.floor(this.r)*10;
+        this.score = Math.floor(this.area*SCORE_MULTIPLIER);
         this.screenX;
         this.screenY;
-        this.speed = 20;
+        this.topSpeed;
         this.moveTreshold = 20;
         this.playerInGame = false;
+        calculateSpeed(this);
     }
     drawMe(){
         // DRAWING A CIRCLE
@@ -169,12 +171,13 @@ class Enemy {
         this.area = getArea(this.r);
         this.deltaX = 0;
         this.deltaY = 0;
-        this.score = Math.floor(this.r)*10;
-        this.speed = 20;
+        this.score = Math.floor(this.area*SCORE_MULTIPLIER);
+        this.topSpeed;
         this.moveTreshold = 20;
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
+        calculateSpeed(this);
     }
 
     drawMe(){
@@ -237,15 +240,15 @@ function movePlayer(player){
     }
     if (Math.abs(player.screenX - mouseX)>player.moveTreshold){
         if (player.screenX > mouseX) {
-            player.x = Math.max(player.x -= player.speed, 0);
+            player.x = Math.max(player.x -= player.topSpeed, 0);
         } else {
-            player.x = Math.min(player.x += player.speed, board.sizeX);
+            player.x = Math.min(player.x += player.topSpeed, board.sizeX);
         }    }
     if (Math.abs(player.screenY - mouseY)>player.moveTreshold){
         if (player.screenY > mouseY) {
-            player.y = Math.max(player.y -= player.speed, 0);
+            player.y = Math.max(player.y -= player.topSpeed, 0);
         } else {
-            player.y = Math.min(player.y += player.speed, board.sizeY);
+            player.y = Math.min(player.y += player.topSpeed, board.sizeY);
         }
     }
 }
@@ -259,6 +262,15 @@ const BOARD_SIZE = {
 };
 
 const FOOD_COUNT = 800;
+
+const SPEED_PARAMS = {
+    maxSpeed: 30,
+    minSpeed: 5,
+    sizeForReduction: 30,
+    reductionInverseSlope: 50,
+}
+
+const SCORE_MULTIPLIER = 10**-1;
 
 var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height);
 
@@ -435,8 +447,21 @@ function eatPlayer(prey, predatorArray){
 function updateAfterLunch(prey, predator){
     predator.area += prey.area;
     predator.r = getRadius(predator.area);
-    predator.score = Math.floor(predator.r)*10;
+    updateStats(predator);
 }
+
+function updateStats(someone){
+    someone.score = Math.floor(someone.area*SCORE_MULTIPLIER);
+    calculateSpeed(someone);
+}
+
+function calculateSpeed(someone){
+    var params = SPEED_PARAMS;
+    someone.topSpeed = (params.maxSpeed - params.minSpeed)
+        * Math.exp(-(someone.r - params.sizeForReduction)/params.reductionInverseSlope)
+        + params.minSpeed;
+}
+
 
 // PLAYER AI
 setInterval("randomDirection(enemyPlayers)",4000);
@@ -456,15 +481,15 @@ function moveRandom(onePlayer){
 function moveOneEnemy(oneEnemy){
     if (Math.abs(oneEnemy.deltaX)>oneEnemy.moveTreshold){
         if (oneEnemy.deltaX < 0) {
-            oneEnemy.x = Math.max(oneEnemy.x -= oneEnemy.speed, 0);
+            oneEnemy.x = Math.max(oneEnemy.x -= oneEnemy.topSpeed, 0);
         } else {
-            oneEnemy.x = Math.min(oneEnemy.x += oneEnemy.speed, board.sizeX);
+            oneEnemy.x = Math.min(oneEnemy.x += oneEnemy.topSpeed, board.sizeX);
         }    }
     if (Math.abs(oneEnemy.deltaY)>oneEnemy.moveTreshold){
         if (oneEnemy.deltaY < 0) {
-            oneEnemy.y = Math.max(oneEnemy.y -= oneEnemy.speed, 0);
+            oneEnemy.y = Math.max(oneEnemy.y -= oneEnemy.topSpeed, 0);
         } else {
-            oneEnemy.y = Math.min(oneEnemy.y += oneEnemy.speed, board.sizeY);
+            oneEnemy.y = Math.min(oneEnemy.y += oneEnemy.topSpeed, board.sizeY);
         }
     }
 }
