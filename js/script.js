@@ -56,7 +56,7 @@ class Player {
         this.y = playerY;
         this.r = playerRadius;
         this.area = getArea(this.r);
-        this.score = 0;
+        this.score = Math.floor(this.r)*10;
         this.screenX;
         this.screenY;
         this.speed = 20;
@@ -169,7 +169,7 @@ class Enemy {
         this.area = getArea(this.r);
         this.deltaX = 0;
         this.deltaY = 0;
-        this.score = 0;
+        this.score = Math.floor(this.r)*10;
         this.speed = 20;
         this.moveTreshold = 20;
         this.color = "rgb(" +
@@ -248,7 +248,6 @@ function movePlayer(player){
             player.y = Math.min(player.y += player.speed, board.sizeY);
         }
     }
-    // console.log("Player's position: " + player.x + ", " + player.y);
 }
 
 
@@ -293,8 +292,10 @@ randomDirection(enemyPlayers);
 
 // canvas.width = window.innerWidth;
 // canvas.height = window.innerHeight;
+var leaderboardList = document.querySelector('.leaderboard-list');
 
-player = createPlayer("playerName");
+var userInputName = "SINGLE PLAYER"
+player = createPlayer(userInputName);
 resizeCanvas();
 animationLoop();
 
@@ -313,9 +314,10 @@ function animationLoop(){
     foodCells.forEach(function(cell){
         cell.drawMe();
     });
-
+    
     // sort enemies from smallest to largest
     enemyPlayers.sort((playerOne, playerTwo) => playerOne.r - playerTwo.r);
+    
     // update offscreen tolerance value for rendering
     offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r*board.scale);
     // Player in game
@@ -381,7 +383,7 @@ function createPlayer(playerName){
 
 function spawnPlayer(){
     if (player.r === 0){
-        createPlayer("playerName")
+        createPlayer(userInputName)
     }
     player.updatePlayerPosition(canvas.width, canvas.height);
     player.playerInGame = true;
@@ -406,8 +408,7 @@ function eatSomething(preyArray, predator) {
             return;
         }
         if (detectOverlapping(prey, predator, 0)) {
-            predator.area += prey.area;
-            predator.r = getRadius(predator.area);
+            updateAfterLunch(prey, predator);
             preyArray.splice(index, 1);
             if (prey.name !== 'food'){
                 deadEnemies.push(playerDB.find(player => player.name===prey.name));                
@@ -423,12 +424,18 @@ function eatPlayer(prey, predatorArray){
             return
         }
         if (detectOverlapping(prey, predator, 0)) {
-            predator.area += prey.area;
-            predator.r = getRadius(predator.area);
+            updateAfterLunch(prey, predator);
             prey.playerInGame = false;
             prey.r = 0;
+            prey.score = 0;
         }
     });
+}
+
+function updateAfterLunch(prey, predator){
+    predator.area += prey.area;
+    predator.r = getRadius(predator.area);
+    predator.score = Math.floor(predator.r)*10;
 }
 
 // PLAYER AI
@@ -509,6 +516,29 @@ function resizeCanvas() {
     player.updatePlayerPosition(canvas.width, canvas.height);
 }
 
+// UI
+
+var uiHud = document.querySelectorAll('.hud');
+var leaderboardList = document.querySelector('.leaderboard-list');
+
+function listLeaderboard(playersList, player, numberListed){
+    if (player.playerInGame){
+        playersList = playersList.concat(player);
+    }
+    // sort in descending order
+    leaderboardList.innerHTML = 
+    playersList.sort((playerOne, playerTwo) => 
+    (playerTwo.score - playerOne.score !== 0) ? playerTwo.score - playerOne.score : playerOne.name - playerOne.name)
+    .slice(0,numberListed)
+    .reduce(function(htmlList, player){
+        return htmlList + "<li><strong>" + player.name + "</strong><span>" + 
+        player.score + "</span></li>";
+    }, "");
+}
+
+// update leaderboard
+listLeaderboard(enemyPlayers, player, 20);
+setInterval("listLeaderboard(enemyPlayers, player, 20)",2000);
 
 // KEY PRESSES EVENT LISTENER
 // keydown event handler (when user presses down on any key)
@@ -523,6 +553,9 @@ document.onkeydown = function(event){
             break;
         case 51: // 3 key
             board.scale = 1;
+            break;
+        case 85: // U key
+            uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
             break;
     }
 
