@@ -61,8 +61,8 @@ class Player {
         this.screenX;
         this.screenY;
         this.topSpeed;
-        this.moveTreshold = 20;
         this.playerInGame = false;
+        this.history = [];
         calculateSpeed(this);
     }
     drawMe(){
@@ -173,10 +173,10 @@ class Enemy {
         this.deltaY = 0;
         this.score = Math.floor(this.area*SCORE_MULTIPLIER);
         this.topSpeed;
-        this.moveTreshold = 20;
         this.color = "rgb(" +
         [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
         ")";
+        this.history = [];
         calculateSpeed(this);
     }
 
@@ -214,7 +214,7 @@ var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
 var offScreenTolerance = 200;
 
-// PLAYER'S MOVEMENT
+// PLAYERS' MOVEMENT
 setMouseMoveListener();
 var mouseX = 0;
 var mouseY = 0;
@@ -222,7 +222,9 @@ var mouseY = 0;
 function setMouseMoveListener(){
     window.onmousemove = mouseMove;
     setInterval(function(){
+        // move main player
         movePlayer(player);
+        // move randomly each enemy
         enemyPlayers.forEach(function(enemy){
             moveOneEnemy(enemy);
         });
@@ -238,21 +240,31 @@ function movePlayer(player){
     if (!player.playerInGame){
         return
     }
-    if (Math.abs(player.screenX - mouseX)>player.moveTreshold){
+    var mouseOffsetX = Math.abs(player.screenX - mouseX);
+    var mouseOffsetY = Math.abs(player.screenY - mouseY);
+
+    if (mouseOffsetX>SPEED_PARAMS.moveTreshold){
+        var speedRatioX = mouseSpeedProfile(mouseOffsetX, SPEED_PARAMS.moveTreshold, SPEED_PARAMS.moveTopSpeedTreshold);
+        
         if (player.screenX > mouseX) {
-            player.x = Math.max(player.x -= player.topSpeed, 0);
+            player.x = Math.max(player.x -= speedRatioX*player.topSpeed, 0);
         } else {
-            player.x = Math.min(player.x += player.topSpeed, board.sizeX);
+            player.x = Math.min(player.x += speedRatioX*player.topSpeed, board.sizeX);
         }    }
-    if (Math.abs(player.screenY - mouseY)>player.moveTreshold){
+    if (mouseOffsetY>SPEED_PARAMS.moveTreshold){
+        var speedRatioY = mouseSpeedProfile(mouseOffsetY, SPEED_PARAMS.moveTreshold, SPEED_PARAMS.moveTopSpeedTreshold);
+        
         if (player.screenY > mouseY) {
-            player.y = Math.max(player.y -= player.topSpeed, 0);
+            player.y = Math.max(player.y -= speedRatioY*player.topSpeed, 0);
         } else {
-            player.y = Math.min(player.y += player.topSpeed, board.sizeY);
+            player.y = Math.min(player.y += speedRatioY*player.topSpeed, board.sizeY);
         }
     }
 }
 
+function mouseSpeedProfile(distance, lowerTreshold, upperTreshold){
+    return Math.min((distance/(upperTreshold - lowerTreshold))**2, 1);
+}
 
 // CREATE INSTANCES OF CLASSES
 
@@ -265,9 +277,11 @@ const FOOD_COUNT = 800;
 
 const SPEED_PARAMS = {
     maxSpeed: 30,
-    minSpeed: 5,
+    minSpeed: 10,
     sizeForReduction: 30,
     reductionInverseSlope: 50,
+    moveTreshold: 20,
+    moveTopSpeedTreshold: 150,
 }
 
 const SCORE_MULTIPLIER = 10**-1;
@@ -305,13 +319,23 @@ randomDirection(enemyPlayers);
 // canvas.width = window.innerWidth;
 // canvas.height = window.innerHeight;
 var leaderboardList = document.querySelector('.leaderboard-list');
+var playButton = document.querySelector('#start-game');
+var userInputName = document.querySelector('#player-name');
+var mainScreen = document.querySelector('.main-screen');
+var playerScoreDisplay = document.querySelector(".score-disp");
 
-var userInputName = "SINGLE PLAYER"
-player = createPlayer(userInputName);
+playButton.onclick = function (){
+    startGame(userInputName);
+};
+
+player = createPlayer("Player");
 resizeCanvas();
 animationLoop();
 
-
+function startGame(userInputName){
+    player.name = userInputName.value;
+    spawnPlayer(player.name);
+}
 
 // DRAWING LOOP
 
@@ -378,6 +402,7 @@ function animationLoop(){
 
     requestAnimationFrame(function (){
         // set up a recursive loop (the drawingLoop function calls itself)
+
         animationLoop();
     });
 }
@@ -388,17 +413,18 @@ function animationLoop(){
 function createPlayer(playerName){
     var randX = Math.floor(Math.random()*board.sizeX);
     var randY = Math.floor(Math.random()*board.sizeY);
-    player = new Player(playerName, randX, randY, 40);
+    player = new Player(playerName, randX, randY, 20);
     player.playerInGame = false;
     return player;
 }
 
-function spawnPlayer(){
+function spawnPlayer(userInputName){
     if (player.r === 0){
         createPlayer(userInputName)
     }
     player.updatePlayerPosition(canvas.width, canvas.height);
     player.playerInGame = true;
+    mainScreen.style.display = "none";
 }
 
 function spawnEnemy(enemyPlayer){
@@ -419,7 +445,8 @@ function eatSomething(preyArray, predator) {
         if (prey.name === predator.name){
             return;
         }
-        if (detectOverlapping(prey, predator, 0)) {
+        if (detectOverlapping(prey, predator, 0)
+        && sizeTolerance(prey, predator)) {
             updateAfterLunch(prey, predator);
             preyArray.splice(index, 1);
             if (prey.name !== 'food'){
@@ -435,13 +462,19 @@ function eatPlayer(prey, predatorArray){
         if (prey.r >= predator.r){
             return
         }
-        if (detectOverlapping(prey, predator, 0)) {
+        if (detectOverlapping(prey, predator, 0)
+        && sizeTolerance(prey, predator)) {
             updateAfterLunch(prey, predator);
-            prey.playerInGame = false;
-            prey.r = 0;
-            prey.score = 0;
-        }
+            gameOver();
+        }        
     });
+}
+
+function gameOver(){
+    player.playerInGame = false;
+    player.r = 0;
+    player.score = 0;
+    mainScreen.style.display = "flex";
 }
 
 function updateAfterLunch(prey, predator){
@@ -479,13 +512,13 @@ function moveRandom(onePlayer){
 }
 
 function moveOneEnemy(oneEnemy){
-    if (Math.abs(oneEnemy.deltaX)>oneEnemy.moveTreshold){
+    if (Math.abs(oneEnemy.deltaX)>SPEED_PARAMS.moveTreshold){
         if (oneEnemy.deltaX < 0) {
             oneEnemy.x = Math.max(oneEnemy.x -= oneEnemy.topSpeed, 0);
         } else {
             oneEnemy.x = Math.min(oneEnemy.x += oneEnemy.topSpeed, board.sizeX);
         }    }
-    if (Math.abs(oneEnemy.deltaY)>oneEnemy.moveTreshold){
+    if (Math.abs(oneEnemy.deltaY)>SPEED_PARAMS.moveTreshold){
         if (oneEnemy.deltaY < 0) {
             oneEnemy.y = Math.max(oneEnemy.y -= oneEnemy.topSpeed, 0);
         } else {
@@ -528,7 +561,14 @@ function detectOverlapping(cellOne, cellTwo, overlapRatio){
     // -1: tangency is enough
     var distance = Math.sqrt((cellOne.x - cellTwo.x)**2 + (cellOne.y - cellTwo.y)**2);
     return (distance <= Math.max(cellOne.r, cellTwo.r) - overlapRatio * Math.min(cellOne.r, cellTwo.r));
-};
+}
+
+function sizeTolerance(cellOne, cellTwo){
+    var areas = [cellOne.area, cellTwo.area];
+    var majorArea = Math.max(...areas);
+    var minorArea = Math.min(...areas);
+    return (majorArea-minorArea)/majorArea > 0.05;
+}
 
 
 // RESIZE WINDOW EVENT LISTENER
@@ -556,25 +596,30 @@ function listLeaderboard(playersList, player, numberListed){
     (playerTwo.score - playerOne.score !== 0) ? playerTwo.score - playerOne.score : playerOne.name - playerOne.name)
     .slice(0,numberListed)
     .reduce(function(htmlList, player){
-        return htmlList + "<li><strong>" + player.name + "</strong><span>" + 
-        player.score + "</span></li>";
+        return htmlList + '<div class="disp-leader" ><li><strong>' + player.name + '</strong></li><span>' + 
+        player.score + '</span></div>';
     }, "");
+}
+
+function updatePlayerScoreDisplay(){
+    playerScoreDisplay.innerHTML = player.playerInGame ? player.score : "";
 }
 
 // update leaderboard
 listLeaderboard(enemyPlayers, player, 20);
-setInterval("listLeaderboard(enemyPlayers, player, 20)",2000);
+setInterval("listLeaderboard(enemyPlayers, player, 20)",1000);
+setInterval("updatePlayerScoreDisplay()",1000);
 
 // KEY PRESSES EVENT LISTENER
 // keydown event handler (when user presses down on any key)
 
 document.onkeydown = function(event){
     switch (event.keyCode) {
-        case 49: // 1 key      
-            board.scale = Math.max(board.scale -= 0.1, 0.1);
+        case 49: // 1 key - zoom out  
+            zoomOut();
             break;
-        case 50: // 2 key
-            board.scale = Math.min(board.scale += 0.1, 4);
+        case 50: // 2 key - zoom in
+            zoomIn();
             break;
         case 51: // 3 key
             board.scale = 1;
@@ -590,10 +635,25 @@ document.onkeydown = function(event){
     }
     switch (event.keyCode) {
         case 13: // return key
-            spawnPlayer();
+            startGame(userInputName);
             break;
     }
 };
 
+function zoomIn(){
+    board.scale = Math.min(board.scale += 0.1, 4);
+}
+
+function zoomOut(){
+    board.scale = Math.max(board.scale -= 0.1, 0.1);
+}
+
 
 // TESTING
+
+// MouseEvent.wheel
+
+window.addEventListener("mousewheel", MouseWheelHandler, false);
+function MouseWheelHandler(event) {
+    event.wheelDelta>0 ? zoomIn() : zoomOut();
+}

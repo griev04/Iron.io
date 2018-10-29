@@ -2,16 +2,37 @@ body {
     margin: 0;
 }
 
+.main-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.spawn-screen {
+    height: 300px;
+    width: 400px;
+    background-color: rgba(204, 204, 204, 0.9);
+    border-radius: 20px;
+    color: black;
+}
+
 .left-hud {
     position: absolute;
     top: 10px;
     left: 10px;
     height: 40px;
-    width: 200px;
+    width: 300px;
     background-color: rgba(240, 240, 240, 0.7);
     border-radius: 20px;
     color: black;
     padding-left: 10px;
+    display: flex;
+    justify-content: space-between;
 }
 
 .right-hud {
@@ -26,6 +47,7 @@ body {
     font-weight: bold;
     color: black;
     padding-left: 20px;
+    padding-right: 40px;
 }
 
 .chat-hud {
@@ -38,6 +60,10 @@ body {
     border-radius: 20px;
     color: black;
     padding-left: 10px;
+}
+
+h1 {
+    margin: 0;
 }
 
 h2 {
@@ -53,3 +79,8 @@ ol, ul {
     display: flex;
     justify-content: space-between;
 } */
+
+.disp-leader {
+    display: flex;
+    justify-content: space-between;
+}
