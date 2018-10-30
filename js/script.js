@@ -18,9 +18,9 @@ playerDB = [
     {name: "Antoine",
     powerUpRadius: 1},
     {name: "Priyanka",
-    powerUpRadius: 8},
+    powerUpRadius: 6},
     {name: "Harnit",
-    powerUpRadius: 10},
+    powerUpRadius: 6},
     {name: "Jean-Nicolas",
     powerUpRadius: 6},
     {name: "Mathis",
@@ -32,7 +32,7 @@ playerDB = [
     {name: "Mehdi",
     powerUpRadius: 1},
     {name: "Geoffroy",
-    powerUpRadius: 1},
+    powerUpRadius: 8},
     {name: "Heather",
     powerUpRadius: 1},
     {name: "Nicolas",
@@ -42,10 +42,12 @@ playerDB = [
     {name: "Marie",
     powerUpRadius: 1},
     {name: "Paul",
-    powerUpRadius: 1},
+    powerUpRadius: 2},
     {name: "Nizar",
-    powerUpRadius: 1},
+    powerUpRadius: 4},
 ];
+
+playerDB = playerDB.slice(0,23);
 
 
 // CLASSES
@@ -58,6 +60,7 @@ class Player {
         this.r = playerRadius;
         this.area = getArea(this.r);
         this.score = Math.floor(this.area*SCORE_MULTIPLIER);
+        this.color = "tomato";
         this.screenX;
         this.screenY;
         this.topSpeed;
@@ -76,7 +79,7 @@ class Player {
         ctx.strokeStyle = "black";
         ctx.stroke();
         // fill the circle
-        ctx.fillStyle = "tomato";
+        ctx.fillStyle = this.color;
         ctx.fill();
         // end the path
         ctx.closePath();
@@ -205,7 +208,70 @@ class Enemy {
 }
 
 class Trap {
+    constructor(gridSizeX, gridSizeY){
+        this.name = "trap";
+        this.x = Math.floor(Math.random()*gridSizeX);
+        this.y = Math.floor(Math.random()*gridSizeY);
+        this.r = 60;
+        this.color = "green";
+    }
 
+    drawMe(){
+        // DRAWING A CIRCLE
+        var relPosition = positionToRelative(this.x, this.y);
+        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        if (onScreen){
+            // start a path (custom drawing needed for circles)
+            ctx.beginPath();
+            // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
+            ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
+            // stroke the circle
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "green";
+            ctx.stroke();
+            // fill the circle
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            // end the path
+            ctx.closePath();
+        }        
+    }
+}
+
+class FreeMass {
+    constructor(parentCell, ejectedMass, direction){
+        this.name = "mass";
+        this.initialOffset = 100;
+        this.x = parentCell.x + this.initialOffset*direction.signX*direction.scalarX;
+        this.y = parentCell.y + this.initialOffset*direction.signY*direction.scalarY;
+        this.r = ejectedMass.radius;
+        this.area = getArea(this.r);
+        this.topSpeed = ejectedMass.speed;
+        this.color = parentCell.color;
+    }
+
+    drawMe(){
+        var relPosition = positionToRelative(this.x, this.y);
+        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        if (onScreen){
+            // DRAWING A CIRCLE
+            // start a path (custom drawing needed for circles)
+            ctx.beginPath();
+            // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
+            ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
+            // fill the circle
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            // end the path
+            ctx.closePath();
+        }
+    }
+
+    dragMass(){
+
+    }
 }
 
 // CANVAS SETUP
@@ -222,12 +288,14 @@ var mouseY = 0;
 function setMouseMoveListener(){
     window.onmousemove = mouseMove;
     setInterval(function(){
-        // move main player
-        movePlayer(player);
-        // move randomly each enemy
-        enemyPlayers.forEach(function(enemy){
-            moveOneEnemy(enemy);
-        });
+        if (!gamePaused){
+            // move main player
+            movePlayer(player);
+            // move randomly each enemy
+            enemyPlayers.forEach(function(enemy){
+                moveOneEnemy(enemy);
+            });
+        }        
     },100);
 }
 
@@ -266,7 +334,8 @@ function mouseSpeedProfile(distance, lowerTreshold, upperTreshold){
     return Math.min((distance/(upperTreshold - lowerTreshold))**2, 1);
 }
 
-// CREATE INSTANCES OF CLASSES
+
+// DEFINE CONSTANTS AND PARAMETERS
 
 const BOARD_SIZE = {
     width: 4320,
@@ -274,6 +343,8 @@ const BOARD_SIZE = {
 };
 
 const FOOD_COUNT = 800;
+
+const TRAPS_COUNT = 10;
 
 const SPEED_PARAMS = {
     maxSpeed: 30,
@@ -286,9 +357,16 @@ const SPEED_PARAMS = {
 
 const SCORE_MULTIPLIER = 10**-1;
 
+var gamePaused = false;
+
+
+// CREATE INSTANCES OF CLASSES
+
 var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height);
 
 var foodCells = generateFoodCells(FOOD_COUNT, board);
+
+var traps = generateTraps(TRAPS_COUNT, board);
 
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
@@ -296,6 +374,14 @@ function generateFoodCells(numberOfCells, board){
         arrayOfCells.push(new FoodCell(board.sizeX, board.sizeY));
     }
     return arrayOfCells;
+}
+
+function generateTraps(numberOfTraps, board){
+    var arrayOfTraps = [];
+    for (var i=0; i<numberOfTraps; i++){
+        arrayOfTraps.push(new Trap (board.sizeX, board.sizeY));
+    }
+    return arrayOfTraps;
 }
 
 // var enemyPlayers = [
@@ -309,6 +395,7 @@ function generateFoodCells(numberOfCells, board){
 // ];
 var enemyPlayers = [];
 var deadEnemies = [];
+var freeMassArray = [];
 playerDB.forEach(function(enemyPlayer){
     spawnEnemy(enemyPlayer);
 });
@@ -340,6 +427,15 @@ function startGame(userInputName){
 // DRAWING LOOP
 
 function animationLoop(){
+    requestAnimationFrame(function (){
+        // set up a recursive loop (the drawingLoop function calls itself)
+        animationLoop();
+    });
+
+    // Pause functionality
+    if (gamePaused){
+        return;
+    }
 
     // --- Drawing elements ---
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -350,6 +446,10 @@ function animationLoop(){
     foodCells.forEach(function(cell){
         cell.drawMe();
     });
+
+    freeMassArray.forEach(function(mass){
+        mass.drawMe();
+    })
     
     // sort enemies from smallest to largest
     enemyPlayers.sort((playerOne, playerTwo) => playerOne.r - playerTwo.r);
@@ -371,23 +471,40 @@ function animationLoop(){
 
         // player eats food
         foodCells = eatSomething(foodCells, player);
+        // player eats free mass
+        freeMassArray = eatSomething(freeMassArray, player);
         // player eats enemies
         enemyPlayers = eatSomething(enemyPlayers, player);
         // player is eaten
         eatPlayer(player, enemyPlayers);
+
+        // user triggers trap
+        trapTrigger(player);
+
     } else {
         // draw only enemies
         enemyPlayers.forEach(enemy => enemy.drawMe());
     }
 
+    // draw traps
+    traps.forEach(function(trap){
+        trap.drawMe();
+    });
+
     // Enemy's behaviour
-    // enemy eats food
+    // enemy eats food and mass
     enemyPlayers.forEach(function(enemy){
         foodCells = eatSomething(foodCells, enemy);
+        freeMassArray = eatSomething(freeMassArray, enemy);
     });
     // enemy eats enemy
     enemyPlayers.forEach(function(enemy){
         enemyPlayers = eatSomething(enemyPlayers, enemy);
+    });
+
+    // enemy triggers trap
+    enemyPlayers.forEach(function(oneEnemy){
+        trapTrigger(oneEnemy);
     });
     
     // no more enemies
@@ -399,12 +516,6 @@ function animationLoop(){
     if (foodCells.length<=0.7*FOOD_COUNT){
         foodCells = foodCells.concat(generateFoodCells(FOOD_COUNT-foodCells.length, board));
     }
-
-    requestAnimationFrame(function (){
-        // set up a recursive loop (the drawingLoop function calls itself)
-
-        animationLoop();
-    });
 }
 
 
@@ -413,7 +524,7 @@ function animationLoop(){
 function createPlayer(playerName){
     var randX = Math.floor(Math.random()*board.sizeX);
     var randY = Math.floor(Math.random()*board.sizeY);
-    player = new Player(playerName, randX, randY, 20);
+    player = new Player(playerName, randX, randY, 60);
     player.playerInGame = false;
     return player;
 }
@@ -438,16 +549,21 @@ function eatSomething(preyArray, predator) {
     if (preyArray.length===undefined){
         preyArray = [preyArray];
     }
-    preyArray.forEach(function (prey, index){
+    preyArray.forEach(function (prey, index){   
+        if (prey.name==="mass"&&detectOverlapping(prey, predator, -1)) {
+            updateAfterLunch(prey, predator);            
+            preyArray.splice(index, 1);
+            return;
+        }   
         if (prey.r >= predator.r){
-            return
+            return;
         }
         if (prey.name === predator.name){
             return;
         }
         if (detectOverlapping(prey, predator, 0)
         && sizeTolerance(prey, predator)) {
-            updateAfterLunch(prey, predator);
+            updateAfterLunch(prey, predator);            
             preyArray.splice(index, 1);
             if (prey.name !== 'food'){
                 deadEnemies.push(playerDB.find(player => player.name===prey.name));                
@@ -501,9 +617,11 @@ setInterval("randomDirection(enemyPlayers)",4000);
 setInterval("respawnEnemies()",5000);
 
 function randomDirection(enemyArray){
-    enemyArray.forEach(function(onePlayer){
-        moveRandom(onePlayer);
-    });
+    if (!gamePaused){
+        enemyArray.forEach(function(onePlayer){
+            moveRandom(onePlayer);
+        });
+    }
 }
 
 function moveRandom(onePlayer){
@@ -528,9 +646,11 @@ function moveOneEnemy(oneEnemy){
 }
 
 function respawnEnemies(){
-    enemiesToSpwan = deadEnemies;
-    deadEnemies = [];
-    enemiesToSpwan.forEach(enemy => spawnEnemy(enemy));
+    if (!gamePaused){
+        enemiesToSpwan = deadEnemies;
+        deadEnemies = [];
+        enemiesToSpwan.forEach(enemy => spawnEnemy(enemy));
+    }
 }
 
 
@@ -538,8 +658,6 @@ function respawnEnemies(){
 
 function positionToRelative(absX, absY){
     return {
-        // x: absX - player.x + (canvas.width)/2,
-        // y: absY - player.y + (canvas.height)/2
         x: board.scale * absX - board.scale * player.x + (canvas.width)/2,
         y: board.scale * absY - board.scale * player.y + (canvas.height)/2
     };
@@ -614,6 +732,16 @@ setInterval("updatePlayerScoreDisplay()",1000);
 // keydown event handler (when user presses down on any key)
 
 document.onkeydown = function(event){
+    // In pause controls
+    if (gamePaused){
+        switch (event.keyCode) {
+            case 27: // escape key
+                gamePaused = !gamePaused;
+                break;
+        }
+        return
+    }
+
     switch (event.keyCode) {
         case 49: // 1 key - zoom out  
             zoomOut();
@@ -626,6 +754,12 @@ document.onkeydown = function(event){
             break;
         case 85: // U key
             uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
+            break;
+        case 32: // space bar
+            ejectMass(player, 20, 40, "user");
+            break;
+        case 27: // escape key
+            gamePaused = !gamePaused;
             break;
     }
 
@@ -648,12 +782,71 @@ function zoomOut(){
     board.scale = Math.max(board.scale -= 0.1, 0.1);
 }
 
-
-// TESTING
-
 // MouseEvent.wheel
 
 window.addEventListener("mousewheel", MouseWheelHandler, false);
 function MouseWheelHandler(event) {
-    event.wheelDelta>0 ? zoomIn() : zoomOut();
+    if (!gamePaused){
+        event.wheelDelta>0 ? zoomIn() : zoomOut();
+    }
+}
+
+
+// TESTING
+function ejectMass(cell, radius, speed, trigger){
+    if (trigger==='user' && cell.r > 40){
+        var ejectedMass = {
+            radius: radius,
+            speed: speed,
+        }
+        cell.area -= getArea(ejectedMass.radius);
+        cell.r = getRadius(cell.area);
+        var directionVector = getDirectionCoeff("user");
+        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
+    } else if(trigger==='trap' && cell.r > 20){ // trap triggers ejection of mass
+        var ejectedMass = {
+            radius: radius,
+            speed: speed,
+        }
+        cell.area -= getArea(ejectedMass.radius);
+        cell.r = getRadius(cell.area);
+        var directionVector = getDirectionCoeff("random");
+        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
+    }
+}
+
+
+function getDirectionCoeff(input){
+    if (input==="user"){
+        var offX = mouseX - player.screenX;
+        var offY = mouseY - player.screenY;
+    } else {
+        var offX = Math.floor(Math.random()*201) - 100;
+        var offY = Math.floor(Math.random()*201) - 100;
+    }    
+    var ratioYX = Math.abs(offY/offX);
+    return {
+        ratioYX: Math.abs(offY/offX),
+        signX: offX/Math.abs(offX),
+        scalarX : 1/Math.sqrt(1+ratioYX**2),
+        signY: offY/Math.abs(offY),
+        scalarY: 1/Math.sqrt(1+ratioYX**2)*ratioYX,
+    }
+}
+
+function trapTrigger(prey){
+    traps.forEach(function(trap){
+        if (prey.r > 50 && detectOverlapping(prey, trap, -1)){
+            var bitsRadius = 20;
+            var oneBit = {
+                radius: bitsRadius,
+                area: getArea(bitsRadius),
+            }
+            var numberOfBits = Math.floor(prey.area/oneBit.area) - 1;
+            // prey.area -= numberOfBits*oneBit.area;
+            for (var i = numberOfBits; i>0; i--){
+                ejectMass(prey, oneBit.radius, 40, "trap");
+            }            
+        }
+    });
 }
