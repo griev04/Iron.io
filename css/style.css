@@ -15,8 +15,27 @@ body {
 }
 
 .spawn-screen {
-    height: 300px;
-    width: 400px;
+    height: 450px;
+    width: 700px;
+    background-color: rgba(204, 204, 204, 0.9);
+    border-radius: 20px;
+    color: black;
+}
+
+.main-pause {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.pause-screen {
+    height: 450px;
+    width: 700px;
     background-color: rgba(204, 204, 204, 0.9);
     border-radius: 20px;
     color: black;
@@ -49,25 +68,6 @@ body {
     color: black;
     padding-left: 20px;
     padding-right: 40px;
-}
-
-.main-pause {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    display: none;
-    justify-content: center;
-    align-items: center;
-}
-
-.pause-screen {
-    height: 300px;
-    width: 400px;
-    background-color: rgba(204, 204, 204, 0.9);
-    border-radius: 20px;
-    color: black;
 }
 
 h1 {

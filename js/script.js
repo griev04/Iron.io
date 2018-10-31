@@ -448,7 +448,7 @@ resizeCanvas();
 animationLoop();
 
 function startGame(userInputName){
-    player.name = userInputName.value;
+    player.name = userInputName.value!==''?userInputName.value:"PLAYER ONE";
     spawnPlayer(player.name);
 }
 
