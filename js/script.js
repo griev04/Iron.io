@@ -47,7 +47,8 @@ playerDB = [
     powerUpRadius: 4},
 ];
 
-playerDB = playerDB.slice(0,playerDB.length);
+// playerDB = playerDB.slice(0,playerDB.length);
+playerDB = playerDB.slice(0,2);
 
 
 // CLASSES
@@ -313,13 +314,16 @@ function setMouseMoveListener(){
         if (!gamePaused){
             // move main player
             movePlayer(player);
-            // move randomly each enemy
-            enemyPlayers.forEach(function(enemy){
-                moveOneEnemy(enemy);
-            });
         }        
-    },100);
+    },50);
 }
+
+setInterval(function(){
+    // move randomly each enemy
+    enemyPlayers.forEach(function(enemy){
+        moveOneEnemy(enemy);
+    });
+}, 50)
 
 function mouseMove(event) {
     mouseX = event.clientX;
@@ -369,8 +373,8 @@ const FOOD_COUNT = 800;
 const TRAPS_COUNT = 10;
 
 const SPEED_PARAMS = {
-    maxSpeed: 30,
-    minSpeed: 10,
+    maxSpeed: 15,
+    minSpeed: 5,
     sizeForReduction: 30,
     reductionInverseSlope: 50,
     moveTreshold: 20,
@@ -583,7 +587,7 @@ function eatSomething(preyArray, predator) {
         preyArray = [preyArray];
     }
     preyArray.forEach(function (prey, index){   
-        if (prey.name==="mass"&&detectOverlapping(prey, predator, -1)) {
+        if (prey.constructor.name === 'FreeMass'&& detectOverlapping(prey, predator, -1)) {
             updateAfterLunch(prey, predator);            
             preyArray.splice(index, 1);
             return;
@@ -644,6 +648,76 @@ function calculateSpeed(someone){
         + params.minSpeed;
 }
 
+function ejectMass(cell, radius, speed, trigger, target){
+    if (trigger==='user' && cell.r > 40){
+        var ejectedMass = {
+            radius: radius,
+            speed: speed,
+        }
+        cell.area -= getArea(ejectedMass.radius);
+        cell.r = getRadius(cell.area);
+        var directionVector = getDirectionCoeff("user");
+        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
+    } else if(trigger==='trap' && cell.r > 20){ // trap triggers ejection of mass
+        var ejectedMass = {
+            radius: radius,
+            speed: speed,
+        }
+        cell.area -= getArea(ejectedMass.radius);
+        cell.r = getRadius(cell.area);
+        var directionVector = getDirectionCoeff("random");
+        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
+    } else if (trigger==='enemyAI'){
+        var ejectedMass = {
+            radius: radius,
+            speed: speed,
+        }
+        cell.area -= getArea(ejectedMass.radius);
+        cell.r = getRadius(cell.area);
+        var directionVector = getDirectionCoeff("enemyAI", cell, target);
+        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
+    }
+    updateStats(cell);
+}
+
+
+function getDirectionCoeff(input, oneCell, targetCell){
+    if (input==="user"){
+        var offX = mouseX - player.screenX;
+        var offY = mouseY - player.screenY;
+    } else if (input==="random") {
+        var offX = Math.floor(Math.random()*201) - 100;
+        var offY = Math.floor(Math.random()*201) - 100;
+    } else if (input==="enemyAI") {
+        var offX = targetCell.x - oneCell.x;
+        var offY = targetCell.y - oneCell.y;
+    }
+    var ratioYX = Math.abs(offY/offX);
+    return {
+        ratioYX: Math.abs(offY/offX),
+        signX: offX/Math.abs(offX),
+        scalarX : 1/Math.sqrt(1+ratioYX**2),
+        signY: offY/Math.abs(offY),
+        scalarY: 1/Math.sqrt(1+ratioYX**2)*ratioYX,
+    }
+}
+
+function trapTrigger(prey){
+    traps.forEach(function(trap){
+        if (prey.r > 50 && detectOverlapping(prey, trap, -1)){
+            var bitsRadius = 20;
+            var oneBit = {
+                radius: bitsRadius,
+                area: getArea(bitsRadius),
+            }
+            var numberOfBits = Math.floor(prey.area/oneBit.area) - 1;
+            // prey.area -= numberOfBits*oneBit.area;
+            for (var i = numberOfBits; i>0; i--){
+                ejectMass(prey, oneBit.radius, 50, "trap");
+            }            
+        }
+    });
+}
 
 // PLAYER AI
 setInterval("randomDirection(enemyPlayers)",4000);
@@ -704,13 +778,17 @@ function getArea(radius){
     return Math.PI*radius**2;
 }
 
+function getDistance(itemOne, itemTwo){
+    return Math.sqrt((itemOne.x - itemTwo.x)**2 + (itemOne.y - itemTwo.y)**2)
+}
+
 function detectOverlapping(cellOne, cellTwo, overlapRatio){
     // overlapRatio ([-1; 1]) states the multiplier for the smallest item's radius.
     // This is defined in order to define overlapping rules
     // 1: whole prey cell must be overlapped to be eaten
     // 0: half prey must be overlapped
     // -1: tangency is enough
-    var distance = Math.sqrt((cellOne.x - cellTwo.x)**2 + (cellOne.y - cellTwo.y)**2);
+    var distance = getDistance(cellOne, cellTwo);
     return (distance <= Math.max(cellOne.r, cellTwo.r) - overlapRatio * Math.min(cellOne.r, cellTwo.r));
 }
 
@@ -796,8 +874,10 @@ document.onkeydown = function(event){
             ejectMass(player, 20, 60, "user");
             break;
         case 27: // escape key
-            gamePaused = !gamePaused;
-            pauseScreen.style.display = "flex";
+            if (player.playerInGame) {
+                gamePaused = !gamePaused;
+                pauseScreen.style.display = "flex";
+            }
             break;
     }
 
@@ -831,60 +911,46 @@ function MouseWheelHandler(event) {
 
 
 // TESTING
-function ejectMass(cell, radius, speed, trigger){
-    if (trigger==='user' && cell.r > 40){
-        var ejectedMass = {
-            radius: radius,
-            speed: speed,
-        }
-        cell.area -= getArea(ejectedMass.radius);
-        cell.r = getRadius(cell.area);
-        var directionVector = getDirectionCoeff("user");
-        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
-    } else if(trigger==='trap' && cell.r > 20){ // trap triggers ejection of mass
-        var ejectedMass = {
-            radius: radius,
-            speed: speed,
-        }
-        cell.area -= getArea(ejectedMass.radius);
-        cell.r = getRadius(cell.area);
-        var directionVector = getDirectionCoeff("random");
-        freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
-    }
+function enemyAI(oneEnemy){
+    // find lunch
+    var opponents = enemyPlayers.concat(player, freeMassArray);
+    var target = findNearestSmaller(oneEnemy, opponents);
+    var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
+
+    // find enemy
+    var opponents = enemyPlayers.concat(player);
+    var target = findNearestBigger(oneEnemy, opponents);
+    var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
+
+    // bait lunch
+    var opponents = enemyPlayers.concat(player);
+    baitSomeone(oneEnemy, opponents);
 }
 
-
-function getDirectionCoeff(input){
-    if (input==="user"){
-        var offX = mouseX - player.screenX;
-        var offY = mouseY - player.screenY;
-    } else {
-        var offX = Math.floor(Math.random()*201) - 100;
-        var offY = Math.floor(Math.random()*201) - 100;
-    }    
-    var ratioYX = Math.abs(offY/offX);
-    return {
-        ratioYX: Math.abs(offY/offX),
-        signX: offX/Math.abs(offX),
-        scalarX : 1/Math.sqrt(1+ratioYX**2),
-        signY: offY/Math.abs(offY),
-        scalarY: 1/Math.sqrt(1+ratioYX**2)*ratioYX,
-    }
-}
-
-function trapTrigger(prey){
-    traps.forEach(function(trap){
-        if (prey.r > 50 && detectOverlapping(prey, trap, -1)){
-            var bitsRadius = 20;
-            var oneBit = {
-                radius: bitsRadius,
-                area: getArea(bitsRadius),
-            }
-            var numberOfBits = Math.floor(prey.area/oneBit.area) - 1;
-            // prey.area -= numberOfBits*oneBit.area;
-            for (var i = numberOfBits; i>0; i--){
-                ejectMass(prey, oneBit.radius, 50, "trap");
-            }            
-        }
+function findNearestSmaller(oneEnemy, opponents){
+    opponents = opponents.filter(oneOpponent => (oneOpponent.r < oneEnemy.r || oneOpponent.constructor.name === 'FreeMass') && oneOpponent.name !== oneEnemy.name)
+    .sort(function (cellOne, cellTwo){
+        var distanceOne = getDistance(cellOne, oneEnemy) - (cellOne.r + cellTwo.r);
+        var distanceTwo = getDistance(cellTwo, oneEnemy) - (cellOne.r + cellTwo.r);
+        return distanceOne - distanceTwo;
     });
+    return opponents[0];
+}
+
+function findNearestBigger(oneEnemy, opponents){
+    opponents = opponents.filter(oneOpponent => oneOpponent.r > oneEnemy.r && oneOpponent.name !== oneEnemy.name)
+    .sort(function (cellOne, cellTwo){
+        var distanceOne = getDistance(cellOne, cellTwo) - (cellOne.r + cellTwo.r);
+        var distanceTwo = getDistance(cellOne, cellTwo) - (cellOne.r + cellTwo.r);
+        return distanceOne - distanceTwo;
+    });
+    return opponents[0];
+}
+
+function baitSomeone(oneEnemy, opponents, maximumDistance){    
+    var target = findNearestSmaller(oneEnemy, opponents);
+    var distance = getDistance(oneEnemy, target);
+    if (distance < maximumDistance) {
+        ejectMass(oneEnemy, 20, 60, "enemyAI", target);
+    }
 }
