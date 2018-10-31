@@ -242,12 +242,13 @@ class Trap {
 class FreeMass {
     constructor(parentCell, ejectedMass, direction){
         this.name = "mass";
-        this.initialOffset = 100;
-        this.x = parentCell.x + this.initialOffset*direction.signX*direction.scalarX;
-        this.y = parentCell.y + this.initialOffset*direction.signY*direction.scalarY;
+        this.initialOffset = 30;
+        this.x = parentCell.x + (parentCell.r + this.initialOffset)*direction.signX*direction.scalarX;
+        this.y = parentCell.y + (parentCell.r + this.initialOffset)*direction.signY*direction.scalarY;
         this.r = ejectedMass.radius;
         this.area = getArea(this.r);
         this.topSpeed = ejectedMass.speed;
+        this.direction = direction;
         this.color = parentCell.color;
     }
 
@@ -269,8 +270,25 @@ class FreeMass {
         }
     }
 
-    dragMass(){
-
+    dragMass(){        
+        var x = this.x + (this.topSpeed)*this.direction.signX*this.direction.scalarX;
+        var y = this.y + (this.topSpeed)*this.direction.signY*this.direction.scalarY;
+        // enforce outer boundaries
+        if (x>BOARD_SIZE.width){
+            this.x = BOARD_SIZE.width;
+        } else if (x<0){
+            this.x = 0;
+        } else {
+            this.x = x;
+        }
+        if (y>BOARD_SIZE.height){
+            this.y = BOARD_SIZE.height;
+        } else if (y<0){
+            this.y = 0;
+        } else {
+            this.y = y;
+        }
+        this.topSpeed *= 0.8;
     }
 }
 
@@ -456,6 +474,7 @@ function animationLoop(){
     
     // update offscreen tolerance value for rendering
     offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r*board.scale);
+
     // Player in game
     if (player.playerInGame){
         // draw player and enemies
@@ -516,6 +535,10 @@ function animationLoop(){
     if (foodCells.length<=0.7*FOOD_COUNT){
         foodCells = foodCells.concat(generateFoodCells(FOOD_COUNT-foodCells.length, board));
     }
+
+    freeMassArray.forEach(function(oneMass){
+        oneMass.dragMass();
+    })
 }
 
 
@@ -756,7 +779,7 @@ document.onkeydown = function(event){
             uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
             break;
         case 32: // space bar
-            ejectMass(player, 20, 40, "user");
+            ejectMass(player, 20, 60, "user");
             break;
         case 27: // escape key
             gamePaused = !gamePaused;
@@ -845,7 +868,7 @@ function trapTrigger(prey){
             var numberOfBits = Math.floor(prey.area/oneBit.area) - 1;
             // prey.area -= numberOfBits*oneBit.area;
             for (var i = numberOfBits; i>0; i--){
-                ejectMass(prey, oneBit.radius, 40, "trap");
+                ejectMass(prey, oneBit.radius, 50, "trap");
             }            
         }
     });
