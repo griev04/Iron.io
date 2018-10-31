@@ -47,7 +47,7 @@ playerDB = [
     powerUpRadius: 4},
 ];
 
-playerDB = playerDB.slice(0,23);
+playerDB = playerDB.slice(0,playerDB.length);
 
 
 // CLASSES
@@ -91,10 +91,11 @@ class Player {
 }
 
 class Board {
-    constructor(gridSizeX, gridSizeY){
+    constructor(gridSizeX, gridSizeY, theme){
         this.sizeX = gridSizeX;
         this.sizeY = gridSizeY;
         this.scale = 1;
+        this.theme = theme;
     }
 
     drawMe(){
@@ -107,7 +108,7 @@ class Board {
         // draw a rectangle outline (x, y, width, height)
         ctx.strokeRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
 
-        ctx.fillStyle = "white";
+        ctx.fillStyle = this.theme === "night" ? "rgb(100, 100, 100)" : "white";
         ctx.fillRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
     }
 
@@ -145,8 +146,8 @@ class FoodCell {
     drawMe(){
         // DRAWING A CIRCLE
         var relPosition = positionToRelative(this.x, this.y);
-        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        var onScreen = relPosition.x>=-offScreenTolerance/2 && relPosition.x<=canvas.width+offScreenTolerance/2 &&
+            relPosition.y>=-offScreenTolerance/2 && relPosition.y<=canvas.height+offScreenTolerance/2
         if (onScreen){
             // start a path (custom drawing needed for circles)
             ctx.beginPath();
@@ -185,8 +186,10 @@ class Enemy {
 
     drawMe(){
         var relPosition = positionToRelative(this.x, this.y);
-        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+        var distance = Math.sqrt((relPosition.x - canvas.width/2)**2 + (relPosition.y - canvas.height/2)**2) - this.r*board.scale;
+        var screenHalfDiagonal = Math.sqrt(player.screenX**2 + player.screenY**2);
+        var onScreen = distance < screenHalfDiagonal;
+
         if (onScreen){
             // DRAWING A CIRCLE
             // start a path (custom drawing needed for circles)
@@ -220,7 +223,8 @@ class Trap {
         // DRAWING A CIRCLE
         var relPosition = positionToRelative(this.x, this.y);
         var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance;
+        
         if (onScreen){
             // start a path (custom drawing needed for circles)
             ctx.beginPath();
@@ -255,7 +259,7 @@ class FreeMass {
     drawMe(){
         var relPosition = positionToRelative(this.x, this.y);
         var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance
+            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance;
         if (onScreen){
             // DRAWING A CIRCLE
             // start a path (custom drawing needed for circles)
@@ -296,7 +300,7 @@ class FreeMass {
 
 var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
-var offScreenTolerance = 200;
+var offScreenTolerance = 40;
 
 // PLAYERS' MOVEMENT
 setMouseMoveListener();
@@ -380,7 +384,7 @@ var gamePaused = false;
 
 // CREATE INSTANCES OF CLASSES
 
-var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height);
+var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
 
 var foodCells = generateFoodCells(FOOD_COUNT, board);
 
@@ -425,12 +429,18 @@ randomDirection(enemyPlayers);
 // canvas.height = window.innerHeight;
 var leaderboardList = document.querySelector('.leaderboard-list');
 var playButton = document.querySelector('#start-game');
+var themeButton = document.querySelector('#night-theme');
 var userInputName = document.querySelector('#player-name');
 var mainScreen = document.querySelector('.main-screen');
+var pauseScreen = document.querySelector('.main-pause');
 var playerScoreDisplay = document.querySelector(".score-disp");
 
 playButton.onclick = function (){
     startGame(userInputName);
+};
+
+themeButton.onclick = function (){
+    board.theme = board.theme==="light" ? "night" : "light";
 };
 
 player = createPlayer("Player");
@@ -716,8 +726,8 @@ function sizeTolerance(cellOne, cellTwo){
 
 window.addEventListener('resize', resizeCanvas, false);
 function resizeCanvas() {
-    canvas.width = window.innerWidth-8;
-    canvas.height = window.innerHeight-8;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     player.updatePlayerPosition(canvas.width, canvas.height);
 }
@@ -760,6 +770,7 @@ document.onkeydown = function(event){
         switch (event.keyCode) {
             case 27: // escape key
                 gamePaused = !gamePaused;
+                pauseScreen.style.display = "none";
                 break;
         }
         return
@@ -778,11 +789,15 @@ document.onkeydown = function(event){
         case 85: // U key
             uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
             break;
+        case 84: // T key
+            board.theme = board.theme==="light" ? "night" : "light";
+            break;
         case 32: // space bar
             ejectMass(player, 20, 60, "user");
             break;
         case 27: // escape key
             gamePaused = !gamePaused;
+            pauseScreen.style.display = "flex";
             break;
     }
 

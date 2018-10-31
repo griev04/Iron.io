@@ -1,5 +1,6 @@
 body {
     margin: 0;
+    overflow:hidden;
 }
 
 .main-screen {
@@ -50,16 +51,23 @@ body {
     padding-right: 40px;
 }
 
-.chat-hud {
+.main-pause {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    height: 200px;
-    width: 320px;
-    background-color: rgba(240, 240, 240, 0.7);
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.pause-screen {
+    height: 300px;
+    width: 400px;
+    background-color: rgba(204, 204, 204, 0.9);
     border-radius: 20px;
     color: black;
-    padding-left: 10px;
 }
 
 h1 {
