@@ -1,56 +1,3 @@
-playerDB = [
-    {name: "Cecile",
-    powerUpRadius: 1},
-    {name: "Regis",
-    powerUpRadius: 4},
-    {name: "Helen",
-    powerUpRadius: 5},
-    {name: "Filippo",
-    powerUpRadius: 3},
-    {name: "Fareaha",
-    powerUpRadius: 7},
-    {name: "Niccolo",
-    powerUpRadius: 4},
-    {name: "Amine",
-    powerUpRadius: 2},
-    {name: "Adele",
-    powerUpRadius: 1},
-    {name: "Antoine",
-    powerUpRadius: 1},
-    {name: "Priyanka",
-    powerUpRadius: 6},
-    {name: "Harnit",
-    powerUpRadius: 6},
-    {name: "Jean-Nicolas",
-    powerUpRadius: 6},
-    {name: "Mathis",
-    powerUpRadius: 2},
-    {name: "Laura",
-    powerUpRadius: 1},
-    {name: "Chloe",
-    powerUpRadius: 1},
-    {name: "Mehdi",
-    powerUpRadius: 1},
-    {name: "Geoffroy",
-    powerUpRadius: 8},
-    {name: "Heather",
-    powerUpRadius: 1},
-    {name: "Nicolas",
-    powerUpRadius: 3},
-    {name: "Abi",
-    powerUpRadius: 1},
-    {name: "Marie",
-    powerUpRadius: 1},
-    {name: "Paul",
-    powerUpRadius: 2},
-    {name: "Nizar",
-    powerUpRadius: 4},
-];
-
-// playerDB = playerDB.slice(0,playerDB.length);
-playerDB = playerDB.slice(0,2);
-
-
 // CLASSES
 
 class Player {
@@ -303,7 +250,43 @@ var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
 var offScreenTolerance = 40;
 
+
+// DEFINE CONSTANTS AND PARAMETERS
+
+const BOARD_SIZE = {
+    width: 4320,
+    height: 2160,
+};
+
+const FOOD_COUNT = 800;
+
+const TRAPS_COUNT = 10;
+
+const SPEED_PARAMS = {
+    maxSpeed: 15,
+    minSpeed: 5,
+    sizeForReduction: 30,
+    reductionInverseSlope: 50,
+    moveTreshold: 20,
+    moveTopSpeedTreshold: 150,
+}
+
+const SCORE_MULTIPLIER = 10**-1;
+
+const ENEMY_LEVEL_AI = "random";
+const REACTION_LIKELIHOOD = 0.8;
+var decision = 'bait';
+
+var gameState = {
+    gamePaused: false,
+    gameMode: "standard",
+    gameModeChange: false,
+    canRespawn: true,
+}
+
 // PLAYERS' MOVEMENT
+
+initializeGame();
 setMouseMoveListener();
 var mouseX = 0;
 var mouseY = 0;
@@ -311,7 +294,7 @@ var mouseY = 0;
 function setMouseMoveListener(){
     window.onmousemove = mouseMove;
     setInterval(function(){
-        if (!gamePaused){
+        if (!gameState.gamePaused){
             // move main player
             movePlayer(player);
         }        
@@ -360,40 +343,6 @@ function mouseSpeedProfile(distance, lowerTreshold, upperTreshold){
     return Math.min((distance/(upperTreshold - lowerTreshold))**2, 1);
 }
 
-
-// DEFINE CONSTANTS AND PARAMETERS
-
-const BOARD_SIZE = {
-    width: 4320,
-    height: 2160,
-};
-
-const FOOD_COUNT = 800;
-
-const TRAPS_COUNT = 10;
-
-const SPEED_PARAMS = {
-    maxSpeed: 15,
-    minSpeed: 5,
-    sizeForReduction: 30,
-    reductionInverseSlope: 50,
-    moveTreshold: 20,
-    moveTopSpeedTreshold: 150,
-}
-
-const SCORE_MULTIPLIER = 10**-1;
-
-var gamePaused = false;
-
-
-// CREATE INSTANCES OF CLASSES
-
-var board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
-
-var foodCells = generateFoodCells(FOOD_COUNT, board);
-
-var traps = generateTraps(TRAPS_COUNT, board);
-
 function generateFoodCells(numberOfCells, board){
     var arrayOfCells = [];
     for (var i=0; i<numberOfCells; i++){
@@ -410,22 +359,24 @@ function generateTraps(numberOfTraps, board){
     return arrayOfTraps;
 }
 
-// var enemyPlayers = [
-//     new Enemy("enemy1", 300, 200, 10),
-//     new Enemy("enemy2", 300, 400, 30),
-//     new Enemy("enemy3", 300, 700, 100),
-//     new Enemy("enemy4", 1600, 700, 50),
-//     new Enemy("enemy5", 300, 1700, 70),
-//     new Enemy("enemy6", 300, 900, 200),
-//     new Enemy("enemy7", 1300, 700, 100),
-// ];
-var enemyPlayers = [];
-var deadEnemies = [];
-var freeMassArray = [];
-playerDB.forEach(function(enemyPlayer){
-    spawnEnemy(enemyPlayer);
-});
-randomDirection(enemyPlayers);
+
+function initializeGame(){
+    if (typeof board === 'undefined'){
+        board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
+    }
+    player = createPlayer("Player");
+    foodCells = generateFoodCells(FOOD_COUNT, board);
+    traps = generateTraps(TRAPS_COUNT, board);
+    enemyPlayers = [];
+    deadEnemies = [];
+    freeMassArray = [];
+    playerBase = generateRandomStart(playerDB);
+    playerBase.forEach(function(enemyPlayer){
+        spawnEnemy(enemyPlayer);
+    });
+    randomDirections(enemyPlayers);
+}
+
 
 // RUN FUNCTIONS
 
@@ -447,12 +398,14 @@ themeButton.onclick = function (){
     board.theme = board.theme==="light" ? "night" : "light";
 };
 
-player = createPlayer("Player");
 resizeCanvas();
 animationLoop();
 
 function startGame(userInputName){
     player.name = userInputName.value!==''?userInputName.value:"PLAYER ONE";
+    if (!gameState.canRespawn) {
+        initializeGame();
+    }
     spawnPlayer(player.name);
 }
 
@@ -465,8 +418,19 @@ function animationLoop(){
     });
 
     // Pause functionality
-    if (gamePaused){
+    if (gameState.gamePaused){
         return;
+    }
+
+    if (gameState.gameModeChange){
+        initializeGame();
+        gameState.gameModeChange = !gameState.gameModeChange;
+        if (gameState.gameMode === 'standard'){
+            gameState.canRespawn = true;
+        } else if (gameState.gameMode === 'battleRoyale'){
+            gameState.canRespawn = false;
+        }
+        console.log(gameState.canRespawn);
     }
 
     // --- Drawing elements ---
@@ -667,7 +631,7 @@ function ejectMass(cell, radius, speed, trigger, target){
         cell.r = getRadius(cell.area);
         var directionVector = getDirectionCoeff("random");
         freeMassArray.push(new FreeMass(cell, ejectedMass, directionVector));
-    } else if (trigger==='enemyAI'){
+    } else if (trigger==='enemyAI' && cell.r > 40){
         var ejectedMass = {
             radius: radius,
             speed: speed,
@@ -720,11 +684,16 @@ function trapTrigger(prey){
 }
 
 // PLAYER AI
-setInterval("randomDirection(enemyPlayers)",4000);
+if (ENEMY_LEVEL_AI === "random"){
+    setInterval("randomDirections(enemyPlayers)",3000);
+} else {
+    setInterval("enemyAIDirections(enemyPlayers)",2000);
+}
+
 setInterval("respawnEnemies()",5000);
 
-function randomDirection(enemyArray){
-    if (!gamePaused){
+function randomDirections(enemyArray){
+    if (!gameState.gamePaused){
         enemyArray.forEach(function(onePlayer){
             moveRandom(onePlayer);
         });
@@ -753,7 +722,7 @@ function moveOneEnemy(oneEnemy){
 }
 
 function respawnEnemies(){
-    if (!gamePaused){
+    if (!gameState.gamePaused && gameState.canRespawn){
         enemiesToSpwan = deadEnemies;
         deadEnemies = [];
         enemiesToSpwan.forEach(enemy => spawnEnemy(enemy));
@@ -799,6 +768,14 @@ function sizeTolerance(cellOne, cellTwo){
     return (majorArea-minorArea)/majorArea > 0.05;
 }
 
+function generateRandomStart(playerDB){
+    return playerDB.map(function(onePlayer){
+        return {
+            name: onePlayer.name,
+            powerUpRadius: Math.max(1, 2*Math.floor(Math.random()*5)),
+        }
+    })
+}
 
 // RESIZE WINDOW EVENT LISTENER
 
@@ -836,18 +813,18 @@ function updatePlayerScoreDisplay(){
 
 // update leaderboard
 listLeaderboard(enemyPlayers, player, 20);
-setInterval("listLeaderboard(enemyPlayers, player, 20)",1000);
-setInterval("updatePlayerScoreDisplay()",1000);
+setInterval("listLeaderboard(enemyPlayers, player, 20)",500);
+setInterval("updatePlayerScoreDisplay()",500);
 
 // KEY PRESSES EVENT LISTENER
 // keydown event handler (when user presses down on any key)
 
 document.onkeydown = function(event){
     // In pause controls
-    if (gamePaused){
+    if (gameState.gamePaused){
         switch (event.keyCode) {
             case 27: // escape key
-                gamePaused = !gamePaused;
+                gameState.gamePaused = !gameState.gamePaused;
                 pauseScreen.style.display = "none";
                 break;
         }
@@ -875,7 +852,7 @@ document.onkeydown = function(event){
             break;
         case 27: // escape key
             if (player.playerInGame) {
-                gamePaused = !gamePaused;
+                gameState.gamePaused = !gameState.gamePaused;
                 pauseScreen.style.display = "flex";
             }
             break;
@@ -904,27 +881,51 @@ function zoomOut(){
 
 window.addEventListener("mousewheel", MouseWheelHandler, false);
 function MouseWheelHandler(event) {
-    if (!gamePaused){
+    if (!gameState.gamePaused){
         event.wheelDelta>0 ? zoomIn() : zoomOut();
     }
 }
 
 
 // TESTING
-function enemyAI(oneEnemy){
-    // find lunch
-    var opponents = enemyPlayers.concat(player, freeMassArray);
-    var target = findNearestSmaller(oneEnemy, opponents);
-    var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
 
-    // find enemy
-    var opponents = enemyPlayers.concat(player);
-    var target = findNearestBigger(oneEnemy, opponents);
-    var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
+function assignNewDirection(directionVector, oneEnemy){
+    oneEnemy.deltaX = 100 * directionVector.signX * directionVector.scalarX;
+    oneEnemy.deltaY = 100 * directionVector.signY * directionVector.scalarY;
+}
 
-    // bait lunch
-    var opponents = enemyPlayers.concat(player);
-    baitSomeone(oneEnemy, opponents);
+function enemyAIDirections(enemyArray){
+    enemyArray.forEach(function(oneEnemy){
+        if (Math.random() >= 1-REACTION_LIKELIHOOD){
+            enemyAIDecision(oneEnemy);
+        }
+    })
+}
+
+function enemyAIDecision(oneEnemy){
+    if (decision === 'hunt'){
+        // find lunch
+        var opponents = player.playerInGame ? enemyPlayers.concat(player, freeMassArray) : enemyPlayers.concat(freeMassArray);
+        var target = findNearestSmaller(oneEnemy, opponents);
+        if (!target){
+            return
+        }
+        var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
+        assignNewDirection(directionVector, oneEnemy);
+    } else if (decision === 'run'){
+        // find enemy
+        var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        var target = findNearestBigger(oneEnemy, opponents);
+        if (!target){
+            return
+        }
+        var directionVector = getDirectionCoeff("enemyAI", oneEnemy, target);
+        assignNewDirection(directionVector, oneEnemy);
+    } else if (decision === 'bait'){
+        // bait lunch
+        var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        baitSomeone(oneEnemy, opponents, 1000);
+    }
 }
 
 function findNearestSmaller(oneEnemy, opponents){
@@ -949,6 +950,9 @@ function findNearestBigger(oneEnemy, opponents){
 
 function baitSomeone(oneEnemy, opponents, maximumDistance){    
     var target = findNearestSmaller(oneEnemy, opponents);
+    if (!target){
+        return
+    }
     var distance = getDistance(oneEnemy, target);
     if (distance < maximumDistance) {
         ejectMass(oneEnemy, 20, 60, "enemyAI", target);
