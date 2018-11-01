@@ -545,6 +545,9 @@ function animationLoop(){
         trap.drawMe();
     });
 
+    // draw team ratio display
+    if (gameState.gameMode==='teams') drawTeamCirlceDisplay();
+
     // Enemy's behaviour
     // enemy eats food and mass
     enemyPlayers.forEach(function(enemy){
@@ -890,6 +893,52 @@ function listLeaderboard(playersList, player, numberListed){
     }
     leaderboardList.innerHTML = htmlString;
     playersCount.innerHTML = playersList.length;
+
+    if (gameState.gameMode==='teams'){
+        updateTeamScoreDisplay(playersList);
+    }
+}
+
+function updateTeamScoreDisplay(playersList){
+    teamShare = [0, 0, 0];
+    playersList.forEach(function(onePlayer){
+        if (onePlayer.team===0){
+            teamShare[0]+=onePlayer.area;
+        } else if (onePlayer.team===1) {
+            teamShare[1]+=onePlayer.area;
+        } else{
+            teamShare[2]+=onePlayer.area;
+        }
+    })
+    var totalMassTeams = teamShare[0] + teamShare[1] + teamShare[2];
+    gameState.teamShare = teamShare.map(team => team/totalMassTeams*2*Math.PI);    
+}
+
+function drawTeamCirlceDisplay(){
+    drawCircleSlice(0, gameState.teamShare[0], "red");
+    drawCircleSlice(gameState.teamShare[0], gameState.teamShare[0] + gameState.teamShare[1], "green");
+    drawCircleSlice(gameState.teamShare[0] + gameState.teamShare[1], 2*Math.PI, "blue");
+}
+
+function drawCircleSlice(startAngle, endAngle, color){
+    var cx = canvas.width - 380;
+    var cy = 80;
+    var cr = 60;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, cr, startAngle, endAngle);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.beginPath();
+    // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
+    ctx.arc(cx, cy, cr, 0, 2*Math.PI);
+    // stroke the circle
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "black";
+    ctx.stroke();
 }
 
 function updatePlayerScoreDisplay(){
