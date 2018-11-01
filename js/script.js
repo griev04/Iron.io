@@ -974,7 +974,7 @@ function zoomIn(){
 }
 
 function zoomOut(){
-    board.scale = Math.max(board.scale -= 0.1, 0.1);
+    board.scale = Math.max(board.scale -= 0.1, 0.6);
 }
 
 // MouseEvent.wheel
