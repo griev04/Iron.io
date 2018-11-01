@@ -8,12 +8,12 @@ class Player {
         this.r = playerRadius;
         this.area = getArea(this.r);
         this.score = Math.floor(this.area*SCORE_MULTIPLIER);
-        this.color = "tomato";
         this.screenX;
         this.screenY;
         this.topSpeed;
         this.playerInGame = false;
-        this.history = [];
+        this.team = gameState.gameMode==="teams" ? Math.floor(Math.random()*3) : 99;
+        generatePlayerColor(this);
         calculateSpeed(this);
     }
     drawMe(){
@@ -35,6 +35,14 @@ class Player {
     updatePlayerPosition(width, height){
         this.screenX = width/2;
         this.screenY = height/2;
+    }
+}
+function generatePlayerColor(player){
+    if (gameState.gameMode==='teams'){
+        // this.team = enemyPlayer.team;
+        player.color = ["red", "green", "blue"][player.team];
+    } else {
+        player.color = "tomato";
     }
 }
 
@@ -115,7 +123,7 @@ class FoodCell {
 }
 
 class Enemy {
-    constructor(playerName, playerX, playerY, playerRadius){
+    constructor(playerName, playerX, playerY, playerRadius, playerTeam=99){
         this.name = playerName;
         this.x = playerX;
         this.y = playerY;
@@ -125,10 +133,8 @@ class Enemy {
         this.deltaY = 0;
         this.score = Math.floor(this.area*SCORE_MULTIPLIER);
         this.topSpeed;
-        this.color = "rgb(" +
-        [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
-        ")";
-        this.history = [];
+        this.team = this.team = gameState.gameMode==="teams" ? playerTeam : 99;
+        this.generateColor();
         calculateSpeed(this);
     }
 
@@ -154,6 +160,16 @@ class Enemy {
             ctx.fill();
             // end the path
             ctx.closePath();
+        }
+    }
+    generateColor(){
+        if (gameState.gameMode==='teams'){
+            // this.team = enemyPlayer.team;
+            this.color = ["red", "green", "blue"][this.team];
+        } else {
+            this.color = "rgb(" +
+            [256, 256, 256].map(el => Math.floor(Math.random()*el)).join(", ") +
+            ")";
         }
     }
 }
@@ -273,15 +289,15 @@ const SPEED_PARAMS = {
 
 const SCORE_MULTIPLIER = 10**-1;
 
-const ENEMY_LEVEL_AI = "random";
 const REACTION_LIKELIHOOD = 0.8;
 var decision = 'bait';
 
 var gameState = {
     gamePaused: false,
-    gameMode: "standard",
+    gameMode: "teams",
     gameModeChange: false,
     canRespawn: true,
+    enemyAiLevel: "random",
 }
 
 // PLAYERS' MOVEMENT
@@ -543,19 +559,24 @@ function spawnEnemy(enemyPlayer){
     var randX = Math.floor(Math.random()*board.sizeX);
     var randY = Math.floor(Math.random()*board.sizeY);
     var radius = 10 * enemyPlayer.powerUpRadius;
-    enemyPlayers.push(new Enemy(enemyPlayer.name, randX, randY, radius));
+    var newEnemy = new Enemy(enemyPlayer.name, randX, randY, radius, enemyPlayer.team);
+    
+    enemyPlayers.push(newEnemy);
 }
 
 function eatSomething(preyArray, predator) {
     if (preyArray.length===undefined){
         preyArray = [preyArray];
     }
-    preyArray.forEach(function (prey, index){   
+    preyArray.forEach(function (prey, index){
         if (prey.constructor.name === 'FreeMass'&& detectOverlapping(prey, predator, -1)) {
             updateAfterLunch(prey, predator);            
             preyArray.splice(index, 1);
             return;
-        }   
+        }
+        if (gameState.gameMode==='teams' && prey.team === predator.team){
+            return;
+        }
         if (prey.r >= predator.r){
             return;
         }
@@ -567,7 +588,7 @@ function eatSomething(preyArray, predator) {
             updateAfterLunch(prey, predator);            
             preyArray.splice(index, 1);
             if (prey.name !== 'food'){
-                deadEnemies.push(playerDB.find(player => player.name===prey.name));                
+                deadEnemies.push(playerBase.find(player => player.name===prey.name));                
             }
         }
     });
@@ -576,6 +597,9 @@ function eatSomething(preyArray, predator) {
 
 function eatPlayer(prey, predatorArray){
     predatorArray.forEach(function (predator){
+        if (gameState.gameMode==='teams' && prey.team === predator.team){
+            return;
+        }
         if (prey.r >= predator.r){
             return
         }
@@ -684,7 +708,7 @@ function trapTrigger(prey){
 }
 
 // PLAYER AI
-if (ENEMY_LEVEL_AI === "random"){
+if (gameState.enemyAiLevel === "random"){
     setInterval("randomDirections(enemyPlayers)",3000);
 } else {
     setInterval("enemyAIDirections(enemyPlayers)",2000);
@@ -773,6 +797,7 @@ function generateRandomStart(playerDB){
         return {
             name: onePlayer.name,
             powerUpRadius: Math.max(1, 2*Math.floor(Math.random()*5)),
+            team: Math.floor(Math.random()*3),
         }
     })
 }
@@ -906,6 +931,7 @@ function enemyAIDecision(oneEnemy){
     if (decision === 'hunt'){
         // find lunch
         var opponents = player.playerInGame ? enemyPlayers.concat(player, freeMassArray) : enemyPlayers.concat(freeMassArray);
+        if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         var target = findNearestSmaller(oneEnemy, opponents);
         if (!target){
             return
@@ -915,6 +941,7 @@ function enemyAIDecision(oneEnemy){
     } else if (decision === 'run'){
         // find enemy
         var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         var target = findNearestBigger(oneEnemy, opponents);
         if (!target){
             return
@@ -924,6 +951,7 @@ function enemyAIDecision(oneEnemy){
     } else if (decision === 'bait'){
         // bait lunch
         var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         baitSomeone(oneEnemy, opponents, 1000);
     }
 }
@@ -957,4 +985,8 @@ function baitSomeone(oneEnemy, opponents, maximumDistance){
     if (distance < maximumDistance) {
         ejectMass(oneEnemy, 20, 60, "enemyAI", target);
     }
+}
+
+function filterOutTeam(subject, listOfPlayers){
+    return listOfPlayers.filter(oneItem => oneItem.team !== subject.team);
 }

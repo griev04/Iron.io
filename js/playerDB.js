@@ -49,3 +49,7 @@ playerDB = [
 
 playerDB = playerDB.slice(0,playerDB.length);
 // playerDB = playerDB.slice(0,2);
+
+// playerDB.map(function(element){
+//     element.team = Math.floor(Math.random()*3);
+// })
