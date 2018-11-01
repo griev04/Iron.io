@@ -13,7 +13,7 @@ class Player {
         this.topSpeed;
         this.bestRank = 9999;
         this.playerInGame = false;
-        this.team = gameState.gameMode==="teams" ? Math.floor(Math.random()*3) : 99;
+        this.team = gameState.playerTeam;
         generatePlayerColor(this);
         calculateSpeed(this);
     }
@@ -299,6 +299,7 @@ var gameState = {
     enemyAiLevel: "random",
     playersCount: 84,
     freeMassTimeout: 10000,
+    playerTeam: 0,
     teamShare: [0, 0, 0],
 }
 
@@ -439,6 +440,7 @@ gameModeTeamsButton.onclick = function (){
     if (gameModeTeamsButton.classList.value.includes("active")){
         return;
     }
+    gameState.playerTeam = Math.floor(Math.random()*3);
     toggleButtons(gameModeTeamsButton);
     gameState.gameModeChange = true;
     gameState.gameMode = "teams";

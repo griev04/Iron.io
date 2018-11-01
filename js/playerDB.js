@@ -36,7 +36,7 @@ playerDB = [
     'Xenomorph',
     'Admiral Adama',
     'RoboCop',
-    'Grand Adm. Thrawn',
+    "Mitth'raw'nuruodo",
     'Snake Plissken',
     'Blade Runner',
     'James Holden',
