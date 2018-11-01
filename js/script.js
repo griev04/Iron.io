@@ -11,6 +11,7 @@ class Player {
         this.screenX;
         this.screenY;
         this.topSpeed;
+        this.bestRank = 9999;
         this.playerInGame = false;
         this.team = gameState.gameMode==="teams" ? Math.floor(Math.random()*3) : 99;
         generatePlayerColor(this);
@@ -31,6 +32,17 @@ class Player {
         ctx.fill();
         // end the path
         ctx.closePath();
+
+        // change the size or font family of ALL the next text
+        ctx.fillStyle = "white";
+        ctx.textAlign="center";
+        var fontSize = 40*board.scale;
+        ctx.font = fontSize + "px bold 'Roboto', serif";
+        // draw some text (string, x, y)
+        ctx.fillText(this.name, this.screenX, this.screenY + fontSize/4);
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 0.5*board.scale;
+        ctx.strokeText(this.name, this.screenX, this.screenY + fontSize/4);
     }
     updatePlayerPosition(width, height){
         this.screenX = width/2;
@@ -160,6 +172,17 @@ class Enemy {
             ctx.fill();
             // end the path
             ctx.closePath();
+            // change the size or font family of ALL the next text
+            ctx.fillStyle = "white";
+            ctx.textAlign="center";
+            var fontSize = 50*board.scale;
+            ctx.font = fontSize + "px bold Roboto Condensed, serif";
+            // draw some text (string, x, y)
+            ctx.fillText(this.name, relPosition.x, relPosition.y + fontSize/4);
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 0.5*board.scale;
+            ctx.strokeText(this.name, relPosition.x, relPosition.y + fontSize/4);
+       
         }
     }
     generateColor(){
@@ -203,6 +226,10 @@ class Trap {
             ctx.fill();
             // end the path
             ctx.closePath();
+
+            // var zombieImg = new Image();
+            // zombieImg.src = "./images/zombie.jpeg";
+            // ctx.drawImage(zombieImg, zombieX, zombieY, 150, 150);
         }        
     }
 }
@@ -270,11 +297,11 @@ var offScreenTolerance = 40;
 // DEFINE CONSTANTS AND PARAMETERS
 
 const BOARD_SIZE = {
-    width: 4320*2,
-    height: 2160*2,
+    width: 4320*3,
+    height: 2160*3,
 };
 
-const FOOD_COUNT = 800*2;
+const FOOD_COUNT = 800*4;
 
 const TRAPS_COUNT = 10;
 
@@ -298,11 +325,13 @@ var gameState = {
     gameModeChange: false,
     canRespawn: true,
     enemyAiLevel: "random",
+    playersCount: 84,
 }
+
 
 // PLAYERS' MOVEMENT
 
-initializeGame();
+initializeGame(gameState.playersCount);
 setMouseMoveListener();
 var mouseX = 0;
 var mouseY = 0;
@@ -376,7 +405,7 @@ function generateTraps(numberOfTraps, board){
 }
 
 
-function initializeGame(){
+function initializeGame(numberOfPlayers){
     if (typeof board === 'undefined'){
         board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
     }
@@ -386,7 +415,7 @@ function initializeGame(){
     enemyPlayers = [];
     deadEnemies = [];
     freeMassArray = [];
-    playerBase = generateRandomStart(playerDB);
+    playerBase = generateRandomStart(playerDB, numberOfPlayers);
     playerBase.forEach(function(enemyPlayer){
         spawnEnemy(enemyPlayer);
     });
@@ -397,6 +426,7 @@ function initializeGame(){
 // RUN FUNCTIONS
 
 var leaderboardList = document.querySelector('.leaderboard-list');
+var playersCount = document.querySelector('#playersCount');
 var playButton = document.querySelector('.start-game');
 var themeButton = document.querySelector('.night-theme');
 var userInputName = document.querySelector('#player-name');
@@ -425,6 +455,7 @@ gameModeStandardButton.onclick = function (){
     toggleButtons(gameModeStandardButton);
     gameState.gameModeChange = true;
     gameState.gameMode = "standard";
+    gameState.playersCount = 84;
 };
 
 gameModeTeamsButton.onclick = function (){
@@ -434,6 +465,7 @@ gameModeTeamsButton.onclick = function (){
     toggleButtons(gameModeTeamsButton);
     gameState.gameModeChange = true;
     gameState.gameMode = "teams";
+    gameState.playersCount = 84;
 };
 
 gameModeBattleRoyaleButton.onclick = function (){
@@ -443,6 +475,7 @@ gameModeBattleRoyaleButton.onclick = function (){
     toggleButtons(gameModeBattleRoyaleButton);
     gameState.gameModeChange = true;
     gameState.gameMode = "battleRoyale";
+    gameState.playersCount = 84;
 };
 
 themeButton.onclick = function (){
@@ -454,8 +487,9 @@ animationLoop();
 
 function startGame(userInputName){
     player.name = userInputName.value!==''?userInputName.value:"PLAYER ONE";
+    player.name += (playerDB.slice(0, gameState.playersCount).includes(player.name)) ? "_1" : "";
     if (!gameState.canRespawn) {
-        initializeGame();
+        initializeGame(gameState.playersCount);
     }
     spawnPlayer(player.name);
 }
@@ -474,7 +508,7 @@ function animationLoop(){
     }
 
     if (gameState.gameModeChange){
-        initializeGame();
+        initializeGame(gameState.playersCount);
         gameState.gameModeChange = !gameState.gameModeChange;
         if (gameState.gameMode === 'standard'){
             gameState.canRespawn = true;
@@ -826,10 +860,11 @@ function sizeTolerance(cellOne, cellTwo){
     return (majorArea-minorArea)/majorArea > 0.05;
 }
 
-function generateRandomStart(playerDB){
-    return playerDB.map(function(onePlayer){
+function generateRandomStart(playerDB, numberOfPlayers){
+    var playersList = playerDB.slice(0,numberOfPlayers);
+    return playersList.map(function(onePlayer){
         return {
-            name: onePlayer.name,
+            name: onePlayer,
             powerUpRadius: Math.max(1, 2*Math.floor(Math.random()*5)),
             team: Math.floor(Math.random()*3),
         }
@@ -849,21 +884,29 @@ function resizeCanvas() {
 // UI
 
 var uiHud = document.querySelectorAll('.hud');
-var leaderboardList = document.querySelector('.leaderboard-list');
 
 function listLeaderboard(playersList, player, numberListed){
     if (player.playerInGame){
         playersList = playersList.concat(player);
     }
-    // sort in descending order
+    // sort in descending
+    var sortedList = playersList.sort((playerOne, playerTwo) => 
+    (playerTwo.score - playerOne.score !== 0) ? playerTwo.score - playerOne.score : playerOne.name - playerOne.name);
+    if (player.playerInGame){
+        var playerRank = sortedList.findIndex(el => el === player) + 1;
+        var playerRankHTML = '<div class="disp-leader disp-user" ><li value=' + playerRank + '><strong>' + player.name + '</strong></li><span>' + 
+        player.score + '</span></div>';
+        if (playerRank < player.bestRank) player.bestRank = playerRank;
+    } else {
+        playerRankHTML = '';
+    }
     leaderboardList.innerHTML = 
-    playersList.sort((playerOne, playerTwo) => 
-    (playerTwo.score - playerOne.score !== 0) ? playerTwo.score - playerOne.score : playerOne.name - playerOne.name)
-    .slice(0,numberListed)
+    sortedList.slice(0,numberListed)
     .reduce(function(htmlList, player){
         return htmlList + '<div class="disp-leader" ><li><strong>' + player.name + '</strong></li><span>' + 
         player.score + '</span></div>';
-    }, "");
+    }, '') + playerRankHTML;
+    playersCount.innerHTML = playersList.length;
 }
 
 function updatePlayerScoreDisplay(){
@@ -872,7 +915,7 @@ function updatePlayerScoreDisplay(){
 
 // update leaderboard
 listLeaderboard(enemyPlayers, player, 20);
-setInterval("listLeaderboard(enemyPlayers, player, 20)",500);
+setInterval("listLeaderboard(enemyPlayers, player, 20)",2000);
 setInterval("updatePlayerScoreDisplay()",500);
 
 // KEY PRESSES EVENT LISTENER
