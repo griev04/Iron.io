@@ -36,11 +36,11 @@ class Player {
         // change the size or font family of ALL the next text
         ctx.fillStyle = "white";
         ctx.textAlign="center";
-        var fontSize = 40*board.scale;
-        ctx.font = fontSize + "px bold 'Roboto', serif";
+        var fontSize = Math.max(Math.floor(40*board.scale*this.r/100), 20);
+        ctx.font = fontSize + "px bold Roboto, serif";
         // draw some text (string, x, y)
         ctx.fillText(this.name, this.screenX, this.screenY + fontSize/4);
-        ctx.strokeStyle = "black";
+        ctx.strokeStyle = "rgb(150, 150, 150)";
         ctx.lineWidth = 0.5*board.scale;
         ctx.strokeText(this.name, this.screenX, this.screenY + fontSize/4);
     }
@@ -76,27 +76,9 @@ class Board {
         // draw a rectangle outline (x, y, width, height)
         ctx.strokeRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
 
-        ctx.fillStyle = this.theme === "night" ? "rgb(100, 100, 100)" : "white";
+        ctx.fillStyle = this.theme === "night" ? "rgb(100, 100, 100)" : "rgb(200, 200, 200)";
         ctx.fillRect(relPosition.x, relPosition.y, this.sizeX*board.scale, this.sizeY*board.scale);
     }
-
-    // drawMeGrid(){
-    //     var margin = 20;
-    
-    //     for (var x = -1000; x <= canvas.width + 1000; x += 40) {
-    //         ctx.moveTo(0.5 + x + margin, margin);
-    //         ctx.lineTo(0.5 + x + margin, canvas.height + margin);
-    //     }
-    
-    
-    //     for (var y = -1000; y <= canvas.height + 1000; y += 40) {
-    //         ctx.moveTo(margin, 0.5 + y + margin);
-    //         ctx.lineTo(canvas.width + margin, 0.5 + y + margin);
-    //     }
-    
-    //     ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
-    //     ctx.stroke();
-    // }
 }
 
 class FoodCell {
@@ -114,8 +96,8 @@ class FoodCell {
     drawMe(){
         // DRAWING A CIRCLE
         var relPosition = positionToRelative(this.x, this.y);
-        var onScreen = relPosition.x>=-offScreenTolerance/2 && relPosition.x<=canvas.width+offScreenTolerance/2 &&
-            relPosition.y>=-offScreenTolerance/2 && relPosition.y<=canvas.height+offScreenTolerance/2
+        var onScreen = relPosition.x>=-50*board.scale && relPosition.x<=canvas.width+50*board.scale &&
+            relPosition.y>=-50*board.scale && relPosition.y<=canvas.height+50*board.scale
         if (onScreen){
             // start a path (custom drawing needed for circles)
             ctx.beginPath();
@@ -172,17 +154,18 @@ class Enemy {
             ctx.fill();
             // end the path
             ctx.closePath();
+
+
             // change the size or font family of ALL the next text
             ctx.fillStyle = "white";
             ctx.textAlign="center";
-            var fontSize = 50*board.scale;
-            ctx.font = fontSize + "px bold Roboto Condensed, serif";
+            var fontSize = Math.max(Math.floor(40*board.scale*this.r/100), 20);
+            ctx.font = fontSize + "px bold Roboto, serif";
             // draw some text (string, x, y)
             ctx.fillText(this.name, relPosition.x, relPosition.y + fontSize/4);
-            ctx.strokeStyle = "black";
+            ctx.strokeStyle = "rgb(150, 150, 150)";
             ctx.lineWidth = 0.5*board.scale;
-            ctx.strokeText(this.name, relPosition.x, relPosition.y + fontSize/4);
-       
+            ctx.strokeText(this.name, relPosition.x, relPosition.y + fontSize/4);       
         }
     }
     generateColor(){
@@ -237,7 +220,7 @@ class Trap {
 class FreeMass {
     constructor(parentCell, ejectedMass, direction){
         this.name = "mass";
-        this.initialOffset = 30;
+        this.initialOffset = 80;
         this.x = parentCell.x + (parentCell.r + this.initialOffset)*direction.signX*direction.scalarX;
         this.y = parentCell.y + (parentCell.r + this.initialOffset)*direction.signY*direction.scalarY;
         this.r = ejectedMass.radius;
@@ -245,6 +228,7 @@ class FreeMass {
         this.topSpeed = ejectedMass.speed;
         this.direction = direction;
         this.color = parentCell.color;
+        this.timer = 0;
     }
 
     drawMe(){
@@ -295,21 +279,22 @@ var offScreenTolerance = 40;
 
 
 // DEFINE CONSTANTS AND PARAMETERS
+var userInputSize = document.querySelector('.size-multiplier');
 
 const BOARD_SIZE = {
     width: 4320*3,
-    height: 2160*3,
+    height: 2160*2,
 };
 
-const FOOD_COUNT = 800*4;
+const FOOD_COUNT = 800*3;
 
-const TRAPS_COUNT = 10;
+const TRAPS_COUNT = 20;
 
 const SPEED_PARAMS = {
     maxSpeed: 20,
-    minSpeed: 7.5,
+    minSpeed: 8,
     sizeForReduction: 50,
-    reductionInverseSlope: 50,
+    reductionInverseSlope: 80,
     moveTreshold: 20,
     moveTopSpeedTreshold: 150,
 }
@@ -326,6 +311,8 @@ var gameState = {
     canRespawn: true,
     enemyAiLevel: "random",
     playersCount: 84,
+    freeMassTimeout: 10000,
+    teamShare: [0, 0, 0],
 }
 
 
@@ -475,7 +462,7 @@ gameModeBattleRoyaleButton.onclick = function (){
     toggleButtons(gameModeBattleRoyaleButton);
     gameState.gameModeChange = true;
     gameState.gameMode = "battleRoyale";
-    gameState.playersCount = 84;
+    gameState.playersCount = 100;
 };
 
 themeButton.onclick = function (){
@@ -609,7 +596,8 @@ function animationLoop(){
 function createPlayer(playerName){
     var randX = Math.floor(Math.random()*board.sizeX);
     var randY = Math.floor(Math.random()*board.sizeY);
-    player = new Player(playerName, randX, randY, 60);
+    console.log("here")
+    player = new Player(playerName, randX, randY, 20*userInputSize.value);
     player.playerInGame = false;
     return player;
 }
@@ -618,6 +606,8 @@ function spawnPlayer(userInputName){
     if (player.r === 0){
         createPlayer(userInputName)
     }
+    player.r = 20*Number(userInputSize.value);
+    player.area = getArea(player.r);
     player.updatePlayerPosition(canvas.width, canvas.height);
     player.playerInGame = true;
     mainScreen.style.display = "none";
@@ -865,7 +855,7 @@ function generateRandomStart(playerDB, numberOfPlayers){
     return playersList.map(function(onePlayer){
         return {
             name: onePlayer,
-            powerUpRadius: Math.max(1, 2*Math.floor(Math.random()*5)),
+            powerUpRadius: Math.max(1, Math.floor(Math.random()*18)),
             team: Math.floor(Math.random()*3),
         }
     })
@@ -899,13 +889,21 @@ function listLeaderboard(playersList, player, numberListed){
         if (playerRank < player.bestRank) player.bestRank = playerRank;
     } else {
         playerRankHTML = '';
-    }
-    leaderboardList.innerHTML = 
+    } 
+    htmlString = 
     sortedList.slice(0,numberListed)
-    .reduce(function(htmlList, player){
-        return htmlList + '<div class="disp-leader" ><li><strong>' + player.name + '</strong></li><span>' + 
-        player.score + '</span></div>';
-    }, '') + playerRankHTML;
+    .reduce(function(htmlList, onePlayer){
+        if (onePlayer.name === player.name){
+            return htmlList + '<div class="disp-leader disp-user" ><li><strong>' + onePlayer.name + '</strong></li><span>' + 
+            onePlayer.score + '</span></div>';
+        }
+        return htmlList + '<div class="disp-leader" ><li><strong>' + onePlayer.name + '</strong></li><span>' + 
+        onePlayer.score + '</span></div>';
+    }, '');
+    if (player.playerInGame && playerRank >= 19){
+        htmlString += playerRankHTML;
+    }
+    leaderboardList.innerHTML = htmlString;
     playersCount.innerHTML = playersList.length;
 }
 
@@ -990,6 +988,15 @@ function MouseWheelHandler(event) {
 
 
 // TESTING
+
+setInterval("cleanFreeMass()",1000);
+
+function cleanFreeMass(){
+    freeMassArray.forEach(function(element, index){
+        freeMassArray[index].timer += 1000;
+    });
+    freeMassArray = freeMassArray.filter(mass => mass.timer<gameState.freeMassTimeout);
+}
 
 function assignNewDirection(directionVector, oneEnemy){
     oneEnemy.deltaX = 100 * directionVector.signX * directionVector.scalarX;

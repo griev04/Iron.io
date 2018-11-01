@@ -33,7 +33,7 @@ playerDB = [
     'HAL-9000',
     'Judge Dredd',
     'E.T.',
-    'Alien',
+    'Xenomorph',
     'Admiral Adama',
     'RoboCop',
     'Grand Adm. Thrawn',
