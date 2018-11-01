@@ -143,7 +143,6 @@ class Enemy {
             // start a path (custom drawing needed for circles)
             ctx.beginPath();
             // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
-            // console.log(relPosition);
             ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
             // stroke the circle
             ctx.lineWidth = 6;
@@ -185,34 +184,20 @@ class Trap {
         this.name = "trap";
         this.x = Math.floor(Math.random()*gridSizeX);
         this.y = Math.floor(Math.random()*gridSizeY);
-        this.r = 60;
+        this.r = 100;
         this.color = "green";
     }
 
     drawMe(){
         // DRAWING A CIRCLE
         var relPosition = positionToRelative(this.x, this.y);
-        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance;
+        var onScreen = relPosition.x>=-this.r*board.scale && relPosition.x<=canvas.width+this.r*board.scale &&
+            relPosition.y>=-this.r*board.scale && relPosition.y<=canvas.height+this.r*board.scale;
         
         if (onScreen){
-            // start a path (custom drawing needed for circles)
-            ctx.beginPath();
-            // draw a cricle, or portion of it (x, y, radius, startAngle, endAngle)
-            ctx.arc(relPosition.x, relPosition.y, this.r*board.scale, 0, 2*Math.PI);
-            // stroke the circle
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "green";
-            ctx.stroke();
-            // fill the circle
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            // end the path
-            ctx.closePath();
-
-            // var zombieImg = new Image();
-            // zombieImg.src = "./images/zombie.jpeg";
-            // ctx.drawImage(zombieImg, zombieX, zombieY, 150, 150);
+            // draw trap image
+            var imgWidth = this.r*2*board.scale;
+            ctx.drawImage(trapImg, relPosition.x - imgWidth/2, relPosition.y - imgWidth/2, imgWidth, imgWidth);
         }        
     }
 }
@@ -233,8 +218,8 @@ class FreeMass {
 
     drawMe(){
         var relPosition = positionToRelative(this.x, this.y);
-        var onScreen = relPosition.x>=-offScreenTolerance && relPosition.x<=canvas.width+offScreenTolerance &&
-            relPosition.y>=-offScreenTolerance && relPosition.y<=canvas.height+offScreenTolerance;
+        var onScreen = relPosition.x>=-this.r*board.scale && relPosition.x<=canvas.width+this.r*board.scale &&
+            relPosition.y>=-this.r*board.scale && relPosition.y<=canvas.height+this.r*board.scale;
         if (onScreen){
             // DRAWING A CIRCLE
             // start a path (custom drawing needed for circles)
@@ -275,7 +260,8 @@ class FreeMass {
 
 var canvas = document.querySelector(".game-canvas");
 var ctx = canvas.getContext("2d");
-var offScreenTolerance = 40;
+var trapImg = new Image();
+trapImg.src = "./images/trapAsset.png";
 
 
 // DEFINE CONSTANTS AND PARAMETERS
@@ -522,7 +508,7 @@ function animationLoop(){
     enemyPlayers.sort((playerOne, playerTwo) => playerOne.r - playerTwo.r);
     
     // update offscreen tolerance value for rendering
-    offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r*board.scale);
+    // offScreenTolerance = Math.ceil(enemyPlayers[enemyPlayers.length-1].r*board.scale);
 
     // Player in game
     if (player.playerInGame){
@@ -596,7 +582,6 @@ function animationLoop(){
 function createPlayer(playerName){
     var randX = Math.floor(Math.random()*board.sizeX);
     var randY = Math.floor(Math.random()*board.sizeY);
-    console.log("here")
     player = new Player(playerName, randX, randY, 20*userInputSize.value);
     player.playerInGame = false;
     return player;
@@ -750,7 +735,7 @@ function getDirectionCoeff(input, oneCell, targetCell){
 
 function trapTrigger(prey){
     traps.forEach(function(trap){
-        if (prey.r > 50 && detectOverlapping(prey, trap, -1)){
+        if (prey.r > trap.r*0.9 && detectOverlapping(prey, trap, -0.95)){
             var bitsRadius = 20;
             var oneBit = {
                 radius: bitsRadius,
@@ -900,7 +885,7 @@ function listLeaderboard(playersList, player, numberListed){
         return htmlList + '<div class="disp-leader" ><li><strong>' + onePlayer.name + '</strong></li><span>' + 
         onePlayer.score + '</span></div>';
     }, '');
-    if (player.playerInGame && playerRank >= 19){
+    if (player.playerInGame && playerRank > 20){
         htmlString += playerRankHTML;
     }
     leaderboardList.innerHTML = htmlString;
@@ -930,32 +915,34 @@ document.onkeydown = function(event){
         }
         return
     }
-
-    switch (event.keyCode) {
-        case 49: // 1 key - zoom out  
-            zoomOut();
-            break;
-        case 50: // 2 key - zoom in
-            zoomIn();
-            break;
-        case 51: // 3 key
-            board.scale = 1;
-            break;
-        case 85: // U key
-            uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
-            break;
-        case 84: // T key
-            board.theme = board.theme==="light" ? "night" : "light";
-            break;
-        case 32: // space bar
-            ejectMass(player, 20, 60, "user");
-            break;
-        case 27: // escape key
-            if (player.playerInGame) {
-                gameState.gamePaused = !gameState.gamePaused;
-                pauseScreen.style.display = "flex";
-            }
-            break;
+    
+    if (userInputName !== document.activeElement) {
+        switch (event.keyCode) {
+            case 49: // 1 key - zoom out  
+                zoomOut();
+                break;
+            case 50: // 2 key - zoom in
+                zoomIn();
+                break;
+            case 51: // 3 key
+                board.scale = 1;
+                break;
+            case 85: // U key
+                uiHud.forEach(uiItem => uiItem.style.display = (uiItem.style.display === 'none') ? '' : 'none');
+                break;
+            case 84: // T key
+                board.theme = board.theme==="light" ? "night" : "light";
+                break;
+            case 32: // space bar
+                ejectMass(player, 20, 60, "user");
+                break;
+            case 27: // escape key
+                if (player.playerInGame) {
+                    gameState.gamePaused = !gameState.gamePaused;
+                    pauseScreen.style.display = "flex";
+                }
+                break;
+        }
     }
 
     // only out of game commands
@@ -974,7 +961,7 @@ function zoomIn(){
 }
 
 function zoomOut(){
-    board.scale = Math.max(board.scale -= 0.1, 0.6);
+    board.scale = Math.max(board.scale -= 0.1, 0.5);
 }
 
 // MouseEvent.wheel
