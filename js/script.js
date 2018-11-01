@@ -266,15 +266,16 @@ trapImg.src = "./images/trapAsset.png";
 
 // DEFINE CONSTANTS AND PARAMETERS
 var userInputSize = document.querySelector('.size-multiplier');
+var userInputName = document.querySelector('#player-name');
 
 const BOARD_SIZE = {
-    width: 4320*3,
-    height: 2160*2,
+    width: 4320*4,
+    height: 2160*3,
 };
 
-const FOOD_COUNT = 800*3;
+const FOOD_COUNT = 800*4;
 
-const TRAPS_COUNT = 20;
+const TRAPS_COUNT = 30;
 
 const SPEED_PARAMS = {
     maxSpeed: 20,
@@ -320,6 +321,9 @@ function setMouseMoveListener(){
 }
 
 setInterval(function(){
+    if (gameState.gamePaused){
+        return;
+    }
     // move randomly each enemy
     enemyPlayers.forEach(function(enemy){
         moveOneEnemy(enemy);
@@ -382,7 +386,8 @@ function initializeGame(numberOfPlayers){
     if (typeof board === 'undefined'){
         board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
     }
-    player = createPlayer("Player");
+    var name = userInputName.value!==''?userInputName.value:"PLAYER ONE";
+    player = createPlayer(name);
     foodCells = generateFoodCells(FOOD_COUNT, board);
     traps = generateTraps(TRAPS_COUNT, board);
     enemyPlayers = [];
@@ -402,7 +407,6 @@ var leaderboardList = document.querySelector('.leaderboard-list');
 var playersCount = document.querySelector('#playersCount');
 var playButton = document.querySelector('.start-game');
 var themeButton = document.querySelector('.night-theme');
-var userInputName = document.querySelector('#player-name');
 var mainScreen = document.querySelector('.main-screen');
 var pauseScreen = document.querySelector('.main-pause');
 var playerScoreDisplay = document.querySelector(".score-disp");
@@ -523,17 +527,7 @@ function animationLoop(){
             enemy.drawMe();
         });
 
-        // player eats food
-        foodCells = eatSomething(foodCells, player);
-        // player eats free mass
-        freeMassArray = eatSomething(freeMassArray, player);
-        // player eats enemies
-        enemyPlayers = eatSomething(enemyPlayers, player);
-        // player is eaten
-        eatPlayer(player, enemyPlayers);
-
-        // user triggers trap
-        trapTrigger(player);
+        
 
     } else {
         // draw only enemies
@@ -548,6 +542,36 @@ function animationLoop(){
     // draw team ratio display
     if (gameState.gameMode==='teams') drawTeamCirlceDisplay();
 
+    // animate moving free mass
+    freeMassArray.forEach(function(oneMass){
+        oneMass.dragMass();
+    })
+    
+}
+
+setInterval(function(){
+    gameLogicLoop();
+}, 50);
+
+function gameLogicLoop(){
+    // Pause functionality
+    if (gameState.gamePaused){
+        return;
+    }
+    // Player in game
+    if (player.playerInGame){
+        // player eats food
+        foodCells = eatSomething(foodCells, player);
+        // player eats free mass
+        freeMassArray = eatSomething(freeMassArray, player);
+        // player eats enemies
+        enemyPlayers = eatSomething(enemyPlayers, player);
+        // player is eaten
+        eatPlayer(player, enemyPlayers);
+
+        // user triggers trap
+        trapTrigger(player);
+    }
     // Enemy's behaviour
     // enemy eats food and mass
     enemyPlayers.forEach(function(enemy){
@@ -573,12 +597,7 @@ function animationLoop(){
     if (foodCells.length<=0.7*FOOD_COUNT){
         foodCells = foodCells.concat(generateFoodCells(FOOD_COUNT-foodCells.length, board));
     }
-
-    freeMassArray.forEach(function(oneMass){
-        oneMass.dragMass();
-    })
 }
-
 
 // --- GAME LOGIC ---
 
@@ -1010,7 +1029,7 @@ function zoomIn(){
 }
 
 function zoomOut(){
-    board.scale = Math.max(board.scale -= 0.1, 0.5);
+    board.scale = Math.max(board.scale -= 0.1, 0.1);
 }
 
 // MouseEvent.wheel
@@ -1028,6 +1047,9 @@ function MouseWheelHandler(event) {
 setInterval("cleanFreeMass()",1000);
 
 function cleanFreeMass(){
+    if (gameState.gamePaused){
+        return;
+    }
     freeMassArray.forEach(function(element, index){
         freeMassArray[index].timer += 1000;
     });
@@ -1040,6 +1062,9 @@ function assignNewDirection(directionVector, oneEnemy){
 }
 
 function enemyAIDirections(enemyArray){
+    if (gameState.gamePaused){
+        return;
+    }
     enemyArray.forEach(function(oneEnemy){
         if (Math.random() >= 1-REACTION_LIKELIHOOD){
             enemyAIDecision(oneEnemy);
