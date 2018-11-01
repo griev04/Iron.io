@@ -256,7 +256,7 @@ class FreeMass {
         } else {
             this.y = y;
         }
-        this.topSpeed *= 0.8;
+        this.topSpeed *= 0.85;
     }
 }
 
@@ -270,18 +270,18 @@ var offScreenTolerance = 40;
 // DEFINE CONSTANTS AND PARAMETERS
 
 const BOARD_SIZE = {
-    width: 4320,
-    height: 2160,
+    width: 4320*2,
+    height: 2160*2,
 };
 
-const FOOD_COUNT = 800;
+const FOOD_COUNT = 800*2;
 
 const TRAPS_COUNT = 10;
 
 const SPEED_PARAMS = {
-    maxSpeed: 15,
-    minSpeed: 5,
-    sizeForReduction: 30,
+    maxSpeed: 20,
+    minSpeed: 7.5,
+    sizeForReduction: 50,
     reductionInverseSlope: 50,
     moveTreshold: 20,
     moveTopSpeedTreshold: 150,
@@ -294,7 +294,7 @@ var decision = 'bait';
 
 var gameState = {
     gamePaused: false,
-    gameMode: "teams",
+    gameMode: "standard",
     gameModeChange: false,
     canRespawn: true,
     enemyAiLevel: "random",
@@ -396,8 +396,6 @@ function initializeGame(){
 
 // RUN FUNCTIONS
 
-// canvas.width = window.innerWidth;
-// canvas.height = window.innerHeight;
 var leaderboardList = document.querySelector('.leaderboard-list');
 var playButton = document.querySelector('.start-game');
 var themeButton = document.querySelector('.night-theme');
@@ -734,10 +732,10 @@ function trapTrigger(prey){
                 radius: bitsRadius,
                 area: getArea(bitsRadius),
             }
-            var numberOfBits = Math.floor(prey.area/oneBit.area) - 1;
+            var numberOfBits = Math.floor(prey.area/oneBit.area) - 4;
             // prey.area -= numberOfBits*oneBit.area;
             for (var i = numberOfBits; i>0; i--){
-                ejectMass(prey, oneBit.radius, 50, "trap");
+                ejectMass(prey, oneBit.radius, 100, "trap");
             }            
         }
     });
