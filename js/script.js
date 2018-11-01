@@ -399,15 +399,52 @@ function initializeGame(){
 // canvas.width = window.innerWidth;
 // canvas.height = window.innerHeight;
 var leaderboardList = document.querySelector('.leaderboard-list');
-var playButton = document.querySelector('#start-game');
-var themeButton = document.querySelector('#night-theme');
+var playButton = document.querySelector('.start-game');
+var themeButton = document.querySelector('.night-theme');
 var userInputName = document.querySelector('#player-name');
 var mainScreen = document.querySelector('.main-screen');
 var pauseScreen = document.querySelector('.main-pause');
 var playerScoreDisplay = document.querySelector(".score-disp");
+var gameModeStandardButton = document.querySelector('.game-mode-standard');
+var gameModeTeamsButton = document.querySelector('.game-mode-teams');
+var gameModeBattleRoyaleButton = document.querySelector('.game-mode-battle-royale');
 
 playButton.onclick = function (){
     startGame(userInputName);
+};
+
+function toggleButtons(button){
+    gameModeStandardButton.classList.remove("active");
+    gameModeTeamsButton.classList.remove("active");
+    gameModeBattleRoyaleButton.classList.remove("active");
+    button.classList.add("active");
+}
+
+gameModeStandardButton.onclick = function (){
+    if (gameModeStandardButton.classList.value.includes("active")){
+        return;
+    }
+    toggleButtons(gameModeStandardButton);
+    gameState.gameModeChange = true;
+    gameState.gameMode = "standard";
+};
+
+gameModeTeamsButton.onclick = function (){
+    if (gameModeTeamsButton.classList.value.includes("active")){
+        return;
+    }
+    toggleButtons(gameModeTeamsButton);
+    gameState.gameModeChange = true;
+    gameState.gameMode = "teams";
+};
+
+gameModeBattleRoyaleButton.onclick = function (){
+    if (gameModeBattleRoyaleButton.classList.value.includes("active")){
+        return;
+    }
+    toggleButtons(gameModeBattleRoyaleButton);
+    gameState.gameModeChange = true;
+    gameState.gameMode = "battleRoyale";
 };
 
 themeButton.onclick = function (){
@@ -446,7 +483,6 @@ function animationLoop(){
         } else if (gameState.gameMode === 'battleRoyale'){
             gameState.canRespawn = false;
         }
-        console.log(gameState.canRespawn);
     }
 
     // --- Drawing elements ---

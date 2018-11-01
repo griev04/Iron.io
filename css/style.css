@@ -87,3 +87,7 @@ ol, ul {
     display: flex;
     justify-content: space-between;
 }
+
+.active {
+    color: red;
+}
