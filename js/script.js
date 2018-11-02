@@ -274,7 +274,7 @@ const BOARD_SIZE = {
     height: 2160*3,
 };
 
-const FOOD_COUNT = 800*4;
+const FOOD_COUNT = 800*3;
 
 const TRAPS_COUNT = 30;
 
@@ -290,14 +290,13 @@ const SPEED_PARAMS = {
 const SCORE_MULTIPLIER = 10**-1;
 
 const REACTION_LIKELIHOOD = 0.8;
-var decision = 'bait';
 
 var gameState = {
     gamePaused: false,
     gameMode: "standard",
     gameModeChange: false,
     canRespawn: true,
-    enemyAiLevel: "random",
+    enemyAiLevel: "NOTrandom",
     playersCount: 84,
     freeMassTimeout: 10000,
     playerTeam: 0,
@@ -389,12 +388,12 @@ function initializeGame(numberOfPlayers){
         board = new Board(BOARD_SIZE.width, BOARD_SIZE.height, "light");
     }
     var name = userInputName.value!==''?userInputName.value:"PLAYER ONE";
-    player = createPlayer(name);
-    foodCells = generateFoodCells(FOOD_COUNT, board);
-    traps = generateTraps(TRAPS_COUNT, board);
     enemyPlayers = [];
     deadEnemies = [];
     freeMassArray = [];
+    traps = generateTraps(TRAPS_COUNT, board);
+    foodCells = generateFoodCells(FOOD_COUNT, board);
+    player = createPlayer(name);
     playerBase = generateRandomStart(playerDB, numberOfPlayers);
     playerBase.forEach(function(enemyPlayer){
         spawnEnemy(enemyPlayer);
@@ -607,11 +606,29 @@ function gameLogicLoop(){
 // --- GAME LOGIC ---
 
 function createPlayer(playerName){
-    var randX = Math.floor(Math.random()*board.sizeX);
-    var randY = Math.floor(Math.random()*board.sizeY);
-    player = new Player(playerName, randX, randY, 20*userInputSize.value);
+    var threats = enemyPlayers.concat(traps);
+    randPos = generateSafeSpawn(threats);
+    player = new Player(playerName, randPos.x, randPos.y, 20*userInputSize.value);
     player.playerInGame = false;
     return player;
+}
+
+function generateSafeSpawn(threats){
+    var randPos ={
+        x: Math.floor(Math.random()*board.sizeX),
+        y: Math.floor(Math.random()*board.sizeY),
+    }
+    if (checkIfOkToSpawn(threats, randPos)){
+        return randPos;
+    }
+    generateSafeSpawn()
+}
+
+function checkIfOkToSpawn(threats, pickedPosition){
+    var unexpectedThreats = threats.filter(function(oneThreat){
+        getDistance(oneThreat, pickedPosition) < 200;
+    });
+    return unexpectedThreats.length === 0;
 }
 
 function spawnPlayer(userInputName){
@@ -789,7 +806,7 @@ function trapTrigger(prey){
 if (gameState.enemyAiLevel === "random"){
     setInterval("randomDirections(enemyPlayers)",3000);
 } else {
-    setInterval("enemyAIDirections(enemyPlayers)",2000);
+    setInterval("enemyAIDirections(enemyPlayers)",1500);
 }
 
 setInterval("respawnEnemies()",5000);
@@ -1081,16 +1098,32 @@ function enemyAIDirections(enemyArray){
         return;
     }
     enemyArray.forEach(function(oneEnemy){
-        if (Math.random() >= 1-REACTION_LIKELIHOOD){
+        if (Math.random()<= REACTION_LIKELIHOOD){
             enemyAIDecision(oneEnemy);
+        } else {
+            moveRandom(oneEnemy);
         }
     })
 }
 
-function enemyAIDecision(oneEnemy){
+function enemyAIDecision(oneEnemy, decisionParam='none'){
+    if (decisionParam==='none'){
+        if (oneEnemy.r <= 40) {
+            var decisionArray = ['hunt', 'run', 'run'];
+        } else {
+            var decisionArray = ['hunt', 'hunt', 'hunt', 'bait', 'bait', 'run', 'run'];
+        }
+        var decision = decisionArray[Math.floor(Math.random()*decisionArray.length)];
+    } else {
+        var decision = decisionParam;
+    }
     if (decision === 'hunt'){
         // find lunch
-        var opponents = player.playerInGame ? enemyPlayers.concat(player, freeMassArray) : enemyPlayers.concat(freeMassArray);
+        if (oneEnemy.r <= 140) {
+            var opponents = player.playerInGame ? enemyPlayers.concat(player, freeMassArray) : enemyPlayers.concat(freeMassArray);
+        } else {            
+            var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        }
         if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         var target = findNearestSmaller(oneEnemy, opponents);
         if (!target){
@@ -1100,7 +1133,11 @@ function enemyAIDecision(oneEnemy){
         assignNewDirection(directionVector, oneEnemy);
     } else if (decision === 'run'){
         // find enemy
-        var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        if (oneEnemy.r > traps[0].r*0.9){
+            var opponents = player.playerInGame ? enemyPlayers.concat(player, traps) : enemyPlayers.concat(traps);
+        } else {
+            var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
+        }
         if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         var target = findNearestBigger(oneEnemy, opponents);
         if (!target){
@@ -1113,6 +1150,11 @@ function enemyAIDecision(oneEnemy){
         var opponents = player.playerInGame ? enemyPlayers.concat(player) : enemyPlayers;
         if (gameState.gameMode === "teams") opponents = filterOutTeam(oneEnemy, opponents);
         baitSomeone(oneEnemy, opponents, 1000);
+        if (baitSomeone){
+            enemyAIDecision(oneEnemy, 'hunt');
+        } else {
+            moveRandom(oneEnemy);
+        }
     }
 }
 
@@ -1127,7 +1169,7 @@ function findNearestSmaller(oneEnemy, opponents){
 }
 
 function findNearestBigger(oneEnemy, opponents){
-    opponents = opponents.filter(oneOpponent => oneOpponent.r > oneEnemy.r && oneOpponent.name !== oneEnemy.name)
+    opponents = opponents.filter(oneOpponent => oneOpponent.constructor.name==='Trap' || (oneOpponent.r > oneEnemy.r && oneOpponent.name !== oneEnemy.name))
     .sort(function (cellOne, cellTwo){
         var distanceOne = getDistance(cellOne, cellTwo) - (cellOne.r + cellTwo.r);
         var distanceTwo = getDistance(cellOne, cellTwo) - (cellOne.r + cellTwo.r);
@@ -1139,12 +1181,13 @@ function findNearestBigger(oneEnemy, opponents){
 function baitSomeone(oneEnemy, opponents, maximumDistance){    
     var target = findNearestSmaller(oneEnemy, opponents);
     if (!target){
-        return
+        return false;
     }
     var distance = getDistance(oneEnemy, target);
     if (distance < maximumDistance) {
         ejectMass(oneEnemy, 20, 60, "enemyAI", target);
     }
+    return true;
 }
 
 function filterOutTeam(subject, listOfPlayers){
