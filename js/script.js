@@ -11,7 +11,8 @@ class Player {
         this.screenX;
         this.screenY;
         this.topSpeed;
-        this.bestRank = 9999;
+        this.bestRank = gameState.playersCount;
+        this.bestScore = 0;
         this.playerInGame = false;
         this.team = gameState.playerTeam;
         generatePlayerColor(this);
@@ -410,6 +411,7 @@ var playButton = document.querySelector('.start-game');
 var themeButton = document.querySelector('.night-theme');
 var mainScreen = document.querySelector('.main-screen');
 var pauseScreen = document.querySelector('.main-pause');
+var gameOverScreen = document.querySelector('.game-over-screen');
 var playerScoreDisplay = document.querySelector(".score-disp");
 var gameModeStandardButton = document.querySelector('.game-mode-standard');
 var gameModeTeamsButton = document.querySelector('.game-mode-teams');
@@ -459,6 +461,7 @@ gameModeBattleRoyaleButton.onclick = function (){
 
 themeButton.onclick = function (){
     board.theme = board.theme==="light" ? "night" : "light";
+    themeButton.classList.toggle('active');
 };
 
 resizeCanvas();
@@ -683,6 +686,14 @@ function gameOver(){
     player.r = 0;
     player.score = 0;
     mainScreen.style.display = "flex";
+    gameOverScreen.style.display = "unset";
+
+    gameOverScreen.innerHTML = '<h2>Game Over!</h2>' +
+        '<h4>You got eaten. Remember that there is always a bigger fish.</h4>' + 
+        '<p>Your best rank was <strong>' + player.bestRank +
+        '</strong> out of ' + gameState.playersCount +
+        ' players with a score of <strong>' + player.bestScore +
+        '</strong> points! What about playing again? ;)</p>';
 }
 
 function updateAfterLunch(prey, predator){
@@ -964,6 +975,7 @@ function drawCircleSlice(startAngle, endAngle, color){
 
 function updatePlayerScoreDisplay(){
     playerScoreDisplay.innerHTML = player.playerInGame ? player.score : "";
+    player.bestScore = Math.max(player.score, player.bestScore);
 }
 
 // update leaderboard
@@ -1002,6 +1014,7 @@ document.onkeydown = function(event){
                 break;
             case 84: // T key
                 board.theme = board.theme==="light" ? "night" : "light";
+                themeButton.classList.toggle('active');
                 break;
             case 32: // space bar
                 ejectMass(player, 20, 60, "user");

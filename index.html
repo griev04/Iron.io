@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Iron.io</title>
 
-    <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Condensed:400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
     <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -25,58 +25,65 @@
     </div>
 
     <div class="main-screen">
+        <div class="game-over-screen">
+            
+        </div>
+
         <div class="spawn-screen">
-            <h1>Iron.io</h1>
+            <div class="main-buttons">
+                <div>
+                    <button class="game-mode-standard active">Standard</button>
+                    <button class="game-mode-teams">Teams</button>
+                    <button class="game-mode-battle-royale">Battle Royale</button>
+                </div>                    
+                <button class="night-theme">Night theme</button>        
+            </div>
             <input type="text" id="player-name" placeholder="Your name">
-            <button class="start-game">Play!</button>
-            <button class="night-theme">Night theme</button>
-            <br>
             Initial size multiplier: <input class="size-multiplier" type="number" value= "1" min="1" max="10">
-            <br>
-            <button class="game-mode-standard active">Standard</button>
-            <button class="game-mode-teams">Teams</button>
-            <button class="game-mode-battle-royale">Battle Royale</button>
+
+            <button class="start-game">Play!</button>
             <h3>Instructions</h3>
             <p>
                 You are a small cell in a wild petri dish filled with fearless rival cells.<br>
                 Survival is your objective.<br>
                 Hunt cells smaller than you but flee from bigger ones or you will become an easy snack.<br>
-                You may also try to bait opponent cells by ejecting part of your mass but beware of traps: you will loose all your precious mass in a blink of an eye.<br>
+                You may also try to bait opponent cells by ejecting part of your mass<br>
+                Beware of traps: you will loose all your precious mass in a blink of an eye.<br>
                 <strong>Good luck, you will need it!</strong>
             </p>
             <h3>Commands</h3>
-            <ul class="command-list">
-                <li>Move mouse to move player (no click needed)</li>
-                <li>Mouse wheel (or keys 1 and 2) for zoom in and zoom out (key 3 resets to default zoom)</li>
-                <li>Space bar: eject mass</li>
-                <li>Esc: pause the game</li>
-                <li>U: hide/unhide user interface</li>
-                <li>T: toggle light and night theme</li>
-            </ul>
+            <p class="command-list">
+                <strong>Move mouse</strong> to move player (no click needed)<br>
+                <strong>Mouse wheel</strong> (or keys 1 and 2) for zoom in and zoom out (key 3 resets to default zoom)<br>
+                <strong>Space bar</strong>: eject mass<br>
+                <strong>Esc</strong>: pause the game<br>
+                <strong>U</strong>: hide/unhide user interface<br>
+                <strong>T</strong>: toggle light and night theme<br>
+            </p>
         </div>
     </div>
 
     <div class="main-pause">
         <div class="pause-screen">
-            <h2>PAUSE</h2>
-            <p>Press Esc to resume game</p>
+            <h2>Pause - press Esc to resume game</h2>          
             <h3>Instructions</h3>
             <p>
                 You are a small cell in a wild petri dish filled with fearless rival cells.<br>
                 Survival is your objective.<br>
                 Hunt cells smaller than you but flee from bigger ones or you will become an easy snack.<br>
-                You may also try to bait opponent cells by ejecting part of your mass but beware of traps: you will loose all your precious mass in a blink of an eye.<br>
+                You may also try to bait opponent cells by ejecting part of your mass<br>
+                Beware of traps: you will loose all your precious mass in a blink of an eye.<br>
                 <strong>Good luck, you will need it!</strong>
             </p>
             <h3>Commands</h3>
-            <ul class="command-list">
-                <li>Move mouse to move player (no click needed)</li>
-                <li>Mouse wheel (or keys 1 and 2) for zoom in and zoom out (key 3 resets to default zoom)</li>
-                <li>Space bar: eject mass</li>
-                <li>Esc: pause the game</li>
-                <li>U: hide/unhide user interface</li>
-                <li>T: toggle light and night theme</li>
-            </ul>
+            <p class="command-list">
+                <strong>Move mouse</strong> to move player (no click needed)<br>
+                <strong>Mouse wheel</strong> (or keys 1 and 2) for zoom in and zoom out (key 3 resets to default zoom)<br>
+                <strong>Space bar</strong>: eject mass<br>
+                <strong>Esc</strong>: pause the game<br>
+                <strong>U</strong>: hide/unhide user interface<br>
+                <strong>T</strong>: toggle light and night theme<br>
+            </p>
         </div>
     </div>
     
