@@ -635,7 +635,9 @@ function spawnPlayer(userInputName){
     if (player.r === 0){
         createPlayer(userInputName)
     }
-    player.r = 20*Number(userInputSize.value);
+    var powerUp = Math.max(Number(userInputSize.value), 1);
+    powerUp = Math.min(powerUp, 10);
+    player.r = 20*powerUp;
     player.area = getArea(player.r);
     player.updatePlayerPosition(canvas.width, canvas.height);
     player.playerInGame = true;
