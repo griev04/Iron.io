@@ -693,24 +693,30 @@ function eatPlayer(prey, predatorArray){
         if (detectOverlapping(prey, predator, 0)
         && sizeTolerance(prey, predator)) {
             updateAfterLunch(prey, predator);
-            gameOver();
+            gameOver(false);
         }        
     });
 }
 
-function gameOver(){
+function gameOver(win){
     player.playerInGame = false;
     player.r = 0;
     player.score = 0;
     mainScreen.style.display = "flex";
     gameOverScreen.style.display = "unset";
-
-    gameOverScreen.innerHTML = '<h2>Game Over!</h2>' +
-        '<h4>You got eaten. Remember that there is always a bigger fish.</h4>' + 
-        '<p>Your best rank was <strong>' + player.bestRank +
-        '</strong> out of ' + gameState.playersCount +
-        ' players with a score of <strong>' + player.bestScore +
-        '</strong> points! What about playing again?</p>';
+    if (!win){
+        gameOverScreen.innerHTML = '<h2>Game Over!</h2>' +
+            '<h4>You got eaten. Remember that there is always a bigger fish.</h4>' + 
+            '<p>Your best rank was <strong>' + player.bestRank +
+            '</strong> out of ' + gameState.playersCount +
+            ' players with a score of <strong>' + player.bestScore +
+            '</strong> points! What about playing again?</p>';
+    } else {
+        gameOverScreen.innerHTML = '<h2>You win!</h2>' +
+            '<h4>You are a pro, life is easy for a cell such as you.</h4>' + 
+            '<p>Your maximum score was <strong>' + player.bestScore +
+            '</strong>, well done!';
+    }
 }
 
 function updateAfterLunch(prey, predator){
@@ -913,6 +919,9 @@ function resizeCanvas() {
 var uiHud = document.querySelectorAll('.hud');
 
 function listLeaderboard(playersList, player, numberListed){
+    if (gameState.gameMode==='battleRoyale' && enemyPlayers.length === 0){
+        gameOver(true);
+    }
     if (player.playerInGame){
         playersList = playersList.concat(player);
     }
