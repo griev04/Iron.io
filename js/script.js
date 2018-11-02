@@ -693,7 +693,7 @@ function gameOver(){
         '<p>Your best rank was <strong>' + player.bestRank +
         '</strong> out of ' + gameState.playersCount +
         ' players with a score of <strong>' + player.bestScore +
-        '</strong> points! What about playing again? ;)</p>';
+        '</strong> points! What about playing again?</p>';
 }
 
 function updateAfterLunch(prey, predator){
